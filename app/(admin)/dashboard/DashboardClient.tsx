@@ -14,6 +14,7 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { motion } from "framer-motion";
+import AnalyticsCharts from "@/components/dashboard/AnalyticsCharts";
 
 const container = {
   hidden: { opacity: 0 },
@@ -95,7 +96,7 @@ export default function DashboardClient({
   const today = new Date().toISOString().split("T")[0];
   const bookingsToday = initialBookings.filter((b) => b.date === today);
   const paymentsToday = initialPayments.filter((p) => p.date === today && p.status === "paid");
-  const totalPaidToday = paymentsToday.reduce((acc, p) => acc + Number(p.amount), 0);
+  const totalPaidToday = Math.round(paymentsToday.reduce((acc, p) => acc + Number(p.amount), 0));
   const pendingBookings = initialBookings.filter((b) => b.status === "pending");
 
   const recentBookings = [...initialBookings]
@@ -150,6 +151,11 @@ export default function DashboardClient({
           icon={Users}
         />
       </section>
+
+      <AnalyticsCharts 
+        bookings={initialBookings} 
+        payments={initialPayments} 
+      />
 
       <section className="dashboard-grid">
         <motion.div variants={item} className="section-card">
