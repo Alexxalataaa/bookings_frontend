@@ -1,0 +1,32 @@
+/* LoadingProvider.module.css */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999; /* Asegura estar por encima de diálogos y modales */
+  background-color: var(--bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Estado activo/visible */
+.visible {
+  opacity: 0.96;
+  pointer-events: auto;
+}
+
+/* Contenedor interno del spinner y texto */
+.loaderContent {
+  transform: scale(0.9);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.visible .loaderContent {
+  transform: scale(1);
+}
