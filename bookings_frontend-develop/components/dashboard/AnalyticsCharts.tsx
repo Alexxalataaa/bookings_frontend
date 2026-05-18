@@ -56,7 +56,7 @@ const DEMO_BOOKINGS: Booking[] = Array.from({ length: 50 }, (_, i) => {
 
 const item = {
   hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
+  show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
 };
 
 export default function AnalyticsCharts({ bookings, payments }: AnalyticsChartsProps) {
@@ -75,7 +75,7 @@ export default function AnalyticsCharts({ bookings, payments }: AnalyticsChartsP
 
     return last7Days.map(date => {
       const dayPayments = activePayments.filter(p => p.date === date && p.status === 'paid');
-      const total = Math.round(dayPayments.reduce((sum, p) => sum + Number(p.amount), 0));
+      const total = Number(dayPayments.reduce((sum, p) => sum + Number(p.amount), 0).toFixed(2));
 
       // Format date for X-axis (e.g., "14 May")
       const d = new Date(date);
@@ -115,7 +115,7 @@ export default function AnalyticsCharts({ bookings, payments }: AnalyticsChartsP
       })
       .reduce((sum, p) => sum + Number(p.amount), 0);
     
-    const currentTotalRounded = Math.round(currentTotal);
+    const currentTotalRounded = Number(currentTotal.toFixed(2));
 
     const prevTotal = activePayments
       .filter(p => {
@@ -124,7 +124,7 @@ export default function AnalyticsCharts({ bookings, payments }: AnalyticsChartsP
       })
       .reduce((sum, p) => sum + Number(p.amount), 0);
 
-    const prevTotalRounded = Math.round(prevTotal);
+    const prevTotalRounded = Number(prevTotal.toFixed(2));
 
     return [
       { name: 'Mes Anterior', value: prevTotalRounded },
@@ -147,7 +147,7 @@ export default function AnalyticsCharts({ bookings, payments }: AnalyticsChartsP
         }}>
           <p style={{ margin: 0, fontWeight: 600, fontSize: '14px', color: 'var(--text)' }}>{label}</p>
           <p style={{ margin: 0, color: 'var(--primary)', fontWeight: 700, fontSize: '16px' }}>
-            {`${Math.round(payload[0].value)} €`}
+            {`${Number(payload[0].value).toFixed(2)} €`}
           </p>
         </div>
       );
