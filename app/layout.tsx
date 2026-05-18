@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import { LoadingProvider } from "@/components/ui/LoadingProvider";
 
 export const metadata: Metadata = {
   title: "Bookings Admin",
@@ -35,7 +36,11 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <LoadingProvider>
+          {children}
+        </LoadingProvider>
+      </body>
     </html>
   );
 }
