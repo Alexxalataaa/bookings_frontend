@@ -28,7 +28,7 @@ const container = {
 
 const item = {
   hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
+  show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
 };
 
 function Badge({ status }: { status: string }) {
@@ -96,7 +96,7 @@ export default function DashboardClient({
   const today = new Date().toISOString().split("T")[0];
   const bookingsToday = initialBookings.filter((b) => b.date === today);
   const paymentsToday = initialPayments.filter((p) => p.date === today && p.status === "paid");
-  const totalPaidToday = Math.round(paymentsToday.reduce((acc, p) => acc + Number(p.amount), 0));
+  const totalPaidToday = paymentsToday.reduce((acc, p) => acc + Number(p.amount), 0).toFixed(2);
   const pendingBookings = initialBookings.filter((b) => b.status === "pending");
 
   const recentBookings = [...initialBookings]
@@ -134,7 +134,7 @@ export default function DashboardClient({
           title="Ingresos hoy" 
           value={`${totalPaidToday} €`} 
           subtitle="Ventas cerradas" 
-          variant={totalPaidToday > 0 ? "positive" : undefined}
+          variant={Number(totalPaidToday) > 0 ? "positive" : undefined}
           icon={CreditCard}
         />
         <KpiCard

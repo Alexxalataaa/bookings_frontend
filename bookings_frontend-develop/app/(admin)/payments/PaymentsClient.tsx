@@ -127,7 +127,8 @@ export default function PaymentsClient({
     e.preventDefault();
     setLoading(true);
     try {
-      const created = await createPayment(formData);
+      const payload = { ...formData, amount: Math.round(formData.amount * 100) / 100 };
+      const created = await createPayment(payload);
       setPayments([created, ...payments]);
       setIsFormOpen(false);
       setFormData({
@@ -181,21 +182,21 @@ export default function PaymentsClient({
       <section className="kpi-grid">
         <KpiCard
           title="Cobrado hoy"
-          value={`${kpis.totalToday} €`}
+          value={`${kpis.totalToday.toFixed(2)} €`}
           subtitle={`${kpis.todayCount} operaciones realizadas`}
           variant="positive"
           icon={TrendingUp}
         />
         <KpiCard
           title="Pendiente"
-          value={`${kpis.totalPending} €`}
+          value={`${kpis.totalPending.toFixed(2)} €`}
           subtitle={`${kpis.pendingCount} cobros por procesar`}
           variant="warning"
           icon={AlertCircle}
         />
         <KpiCard 
           title="Histórico" 
-          value={`${payments.reduce((acc, p) => acc + (p.status === "paid" ? Number(p.amount) : 0), 0)} €`} 
+          value={`${payments.reduce((acc, p) => acc + (p.status === "paid" ? Number(p.amount) : 0), 0).toFixed(2)} €`} 
           subtitle="Total acumulado" 
           icon={History}
         />
@@ -337,7 +338,7 @@ export default function PaymentsClient({
                       <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{payment.businessName}</span>
                     </div>
                   </td>
-                  <td style={{ fontWeight: 700, fontSize: "16px" }}>{payment.amount} €</td>
+                  <td style={{ fontWeight: 700, fontSize: "16px" }}>{Number(payment.amount).toFixed(2)} €</td>
                   <td>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--text-muted)" }}>
                       <MethodIcon method={payment.method} />
