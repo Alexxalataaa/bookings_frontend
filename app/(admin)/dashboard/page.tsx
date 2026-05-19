@@ -1,18 +1,11 @@
 import DashboardClient from "./DashboardClient";
-import { getAppointments, getCustomers, getPayments } from "@/lib/api";
+import AdminProtected from "../admin-protected";
 
-export default async function DashboardPage() {
-  const [bookings, customers, payments] = await Promise.all([
-    getAppointments(),
-    getCustomers(),
-    getPayments(),
-  ]);
-
+export default function DashboardPage() {
   return (
-    <DashboardClient 
-      initialBookings={bookings} 
-      initialCustomers={customers} 
-      initialPayments={payments} 
-    />
+    <AdminProtected>
+      <DashboardClient />
+    </AdminProtected>
   );
 }
+

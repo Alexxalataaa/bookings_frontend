@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Customer, CreateCustomerDto, createCustomer, updateCustomer, deleteCustomer } from "@/lib/api";
+import { Customer, CreateCustomerDto, createCustomer, updateCustomer, deleteCustomer, getCustomers } from "@/lib/api";
+import { useEffect } from "react";
 import { 
   UserPlus, 
   Search, 
@@ -94,12 +95,16 @@ function CustomerCard({
 }
 
 
-export default function CustomersClient({
-  initialCustomers,
-}: {
-  initialCustomers: Customer[];
-}) {
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
+export default function CustomersClient() {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  useEffect(() => {
+    getCustomers()
+      .then(setCustomers)
+      .catch((err) => console.error("Error fetching customers:", err))
+      .finally(() => setInitialLoading(false));
+  }, []);
   const [search, setSearch] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -201,6 +206,14 @@ export default function CustomersClient({
       business: customer.business || "",
     });
     setIsFormOpen(true);
+  }
+
+  if (initialLoading) {
+    return (
+      <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
+        <p>Cargando clientes...</p>
+      </div>
+    );
   }
 
   return (

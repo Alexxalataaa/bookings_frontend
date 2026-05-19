@@ -1,8 +1,11 @@
 import CustomersClient from "./CustomersClient";
-import { getCustomers } from "@/lib/api";
+import AdminProtected from "../admin-protected";
 
-export default async function CustomersPage() {
-  const customers = await getCustomers();
-
-  return <CustomersClient initialCustomers={customers} />;
+export default function CustomersPage() {
+  return (
+    <AdminProtected>
+      <CustomersClient />
+    </AdminProtected>
+  );
 }
+

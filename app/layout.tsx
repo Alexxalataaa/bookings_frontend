@@ -1,6 +1,5 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { LoadingProvider } from "@/components/ui/LoadingProvider";
 
 export const metadata: Metadata = {
   title: "Bookings Admin",
@@ -14,33 +13,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <head>
+      <body>
         <script
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  var theme = localStorage.getItem('app-theme');
-                  var brightness = localStorage.getItem('app-brightness');
-                  if (theme) {
-                    document.documentElement.setAttribute('data-theme', theme);
-                  }
-                  if (brightness) {
-                    document.documentElement.setAttribute('data-brightness', brightness);
-                  } else {
-                    document.documentElement.setAttribute('data-brightness', 'dark');
-                  }
-                } catch (e) {}
-              })();
-            `,
+            __html: `(function(){try{var brightness=localStorage.getItem('app-brightness');if(brightness){document.documentElement.setAttribute('data-brightness',brightness);}else{document.documentElement.setAttribute('data-brightness','dark');}}catch(e){}})();`,
           }}
         />
-      </head>
-      <body>
-        <LoadingProvider>
-          {children}
-        </LoadingProvider>
+        {children}
       </body>
     </html>
   );
 }
+

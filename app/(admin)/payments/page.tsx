@@ -1,8 +1,11 @@
 import PaymentsClient from "./PaymentsClient";
-import { getPayments } from "@/lib/api";
+import AdminProtected from "../admin-protected";
 
-export default async function PaymentsPage() {
-  const payments = await getPayments();
-
-  return <PaymentsClient initialPayments={payments} />;
+export default function PaymentsPage() {
+  return (
+    <AdminProtected>
+      <PaymentsClient />
+    </AdminProtected>
+  );
 }
+

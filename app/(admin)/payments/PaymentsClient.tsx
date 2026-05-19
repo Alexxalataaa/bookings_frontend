@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Payment, CreatePaymentDto, createPayment, updatePayment, deletePayment } from "@/lib/api";
+import { Payment, CreatePaymentDto, createPayment, updatePayment, deletePayment, getPayments } from "@/lib/api";
+import { useEffect } from "react";
 import { 
   Wallet, 
   TrendingUp, 
@@ -91,12 +92,16 @@ const MethodIcon = ({ method }: { method: string }) => {
   }
 };
 
-export default function PaymentsClient({
-  initialPayments,
-}: {
-  initialPayments: Payment[];
-}) {
-  const [payments, setPayments] = useState<Payment[]>(initialPayments);
+export default function PaymentsClient() {
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  useEffect(() => {
+    getPayments()
+      .then(setPayments)
+      .catch((err) => console.error("Error fetching payments:", err))
+      .finally(() => setInitialLoading(false));
+  }, []);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formData, setFormData] = useState<CreatePaymentDto>({
     clientName: "",
@@ -153,6 +158,14 @@ export default function PaymentsClient({
     } catch (error) {
       console.error("Error updating payment", error);
     }
+  }
+
+  if (initialLoading) {
+    return (
+      <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
+        <p>Cargando pagos...</p>
+      </div>
+    );
   }
 
   return (

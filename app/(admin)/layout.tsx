@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import AdminProtected from "./admin-protected";
 
 export default function AdminLayout({
   children,
@@ -12,18 +13,21 @@ export default function AdminLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="admin-shell">
-      <div 
-        className={`sidebar-overlay ${isSidebarOpen ? "sidebar-overlay--active" : ""}`}
-        onClick={() => setIsSidebarOpen(false)}
-      />
-      
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+    <AdminProtected>
+      <div className="admin-shell">
+        <div
+          className={`sidebar-overlay ${isSidebarOpen ? "sidebar-overlay--active" : ""}`}
+          onClick={() => setIsSidebarOpen(false)}
+        />
 
-      <div className="admin-main">
-        <Header onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
-        <main className="admin-content">{children}</main>
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+
+        <div className="admin-main">
+          <Header onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
+          <main className="admin-content">{children}</main>
+        </div>
       </div>
-    </div>
+    </AdminProtected>
   );
 }
+

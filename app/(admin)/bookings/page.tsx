@@ -1,8 +1,11 @@
 import BookingsClient from "./BookingsClient";
-import { getAppointments } from "@/lib/api";
+import AdminProtected from "../admin-protected";
 
-export default async function BookingsPage() {
-  const bookings = await getAppointments();
-
-  return <BookingsClient initialBookings={bookings} />;
+export default function BookingsPage() {
+  return (
+    <AdminProtected>
+      <BookingsClient />
+    </AdminProtected>
+  );
 }
+
