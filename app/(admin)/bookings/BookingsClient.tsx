@@ -11,7 +11,9 @@ import {
   createAppointment,
   deleteAppointment,
   updateAppointment,
+  getAppointments,
 } from "@/lib/api";
+import { useEffect } from "react";
 import { 
   Plus, 
   List, 
@@ -65,12 +67,16 @@ function formatDate(date: string) {
   }
 }
 
-export default function BookingsClient({
-  initialBookings,
-}: {
-  initialBookings: Booking[];
-}) {
-  const [bookings, setBookings] = useState<Booking[]>(initialBookings);
+export default function BookingsClient() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  useEffect(() => {
+    getAppointments()
+      .then(setBookings)
+      .catch((err) => console.error("Error fetching bookings:", err))
+      .finally(() => setInitialLoading(false));
+  }, []);
 
   const emptyForm: CreateBookingDto = {
     date: "",
@@ -257,6 +263,14 @@ export default function BookingsClient({
     } finally {
       setDeletingBookingId(null);
     }
+  }
+
+  if (initialLoading) {
+    return (
+      <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
+        <p>Cargando reservas...</p>
+      </div>
+    );
   }
 
   return (

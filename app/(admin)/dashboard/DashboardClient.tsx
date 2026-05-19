@@ -1,7 +1,8 @@
 "use client";
 
-import { Booking, Customer, Payment } from "@/lib/api";
+import { Booking, Customer, Payment, getAppointments, getCustomers, getPayments } from "@/lib/api";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { 
   Calendar, 
   CreditCard, 
@@ -14,7 +15,8 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { motion } from "framer-motion";
-import AnalyticsCharts from "@/components/dashboard/AnalyticsCharts";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 const container = {
   hidden: { opacity: 0 },
@@ -84,22 +86,75 @@ function KpiCard({
   );
 }
 
-export default function DashboardClient({
-  initialBookings,
-  initialCustomers,
-  initialPayments,
-}: {
-  initialBookings: Booking[];
-  initialCustomers: Customer[];
-  initialPayments: Payment[];
-}) {
-  const today = new Date().toISOString().split("T")[0];
-  const bookingsToday = initialBookings.filter((b) => b.date === today);
-  const paymentsToday = initialPayments.filter((p) => p.date === today && p.status === "paid");
-  const totalPaidToday = Math.round(paymentsToday.reduce((acc, p) => acc + Number(p.amount), 0));
-  const pendingBookings = initialBookings.filter((b) => b.status === "pending");
+export default function DashboardClient() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const recentBookings = [...initialBookings]
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem("auth_token");
+
+        if (!token) {
+          setError("No hay token de autenticación");
+          return;
+        }
+
+        // Fetch appointments
+        const appointmentsData = await getAppointments();
+        setBookings(Array.isArray(appointmentsData) ? appointmentsData : []);
+
+        // Fetch customers
+        const customersData = await getCustomers();
+        setCustomers(Array.isArray(customersData) ? customersData : []);
+
+        // Fetch payments
+        const paymentsData = await getPayments();
+        setPayments(Array.isArray(paymentsData) ? paymentsData : []);
+
+        setError(null);
+      } catch (err) {
+        console.error("Dashboard fetch error:", err);
+        setError(err instanceof Error ? err.message : "Error cargando datos");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
+        <Activity size={32} style={{ margin: "0 auto 16px", opacity: 0.5 }} />
+        <p>Cargando datos...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: "40px", textAlign: "center", color: "#f43f5e" }}>
+        <p>Error: {error}</p>
+        <p style={{ fontSize: "12px", marginTop: "8px", color: "var(--text-muted)" }}>
+          Verifica que el backend esté corriendo en {API_URL}
+        </p>
+      </div>
+    );
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  const bookingsToday = bookings.filter((b) => b.date === today);
+  const paymentsToday = payments.filter((p) => p.date === today && p.status === "paid");
+  const totalPaidToday = paymentsToday.reduce((acc, p) => acc + Number(p.amount), 0);
+  const pendingBookings = bookings.filter((b) => b.status === "pending");
+
+  const recentBookings = [...bookings]
     .sort((a, b) => b.id - a.id)
     .slice(0, 6);
 
@@ -146,16 +201,11 @@ export default function DashboardClient({
         />
         <KpiCard 
           title="Clientes" 
-          value={initialCustomers.length.toString()} 
+          value={customers.length.toString()} 
           subtitle="Base de datos" 
           icon={Users}
         />
       </section>
-
-      <AnalyticsCharts 
-        bookings={initialBookings} 
-        payments={initialPayments} 
-      />
 
       <section className="dashboard-grid">
         <motion.div variants={item} className="section-card">
