@@ -170,3 +170,21 @@ export async function updatePayment(id: number, data: Partial<CreatePaymentDto>)
 export async function deletePayment(id: number): Promise<void> {
   await authedFetch<void>(`${API_URL}/payments/${id}`, { method: "DELETE" });
 }
+
+// Profile / Auth
+export interface UserProfile {
+  id: number;
+  username: string;
+}
+
+export async function getProfile(): Promise<UserProfile> {
+  return authedFetch<UserProfile>(`${API_URL}/auth/profile`, { cache: "no-store" });
+}
+
+export async function updateProfile(data: { username?: string; password?: string }): Promise<UserProfile> {
+  return authedFetch<UserProfile>(`${API_URL}/auth/profile`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}

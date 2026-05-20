@@ -53,12 +53,10 @@ const DEMO_BOOKINGS: Booking[] = Array.from({ length: 50 }, (_, i) => {
     serviceName: services[Math.floor(Math.random() * services.length)]
   };
 });
-
 const item = {
   hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" as const } }
 };
-
 export default function AnalyticsCharts({ bookings, payments }: AnalyticsChartsProps) {
   // Use demo data if real data is empty to showcase the feature
   const activePayments = payments.length > 0 ? payments : DEMO_PAYMENTS;

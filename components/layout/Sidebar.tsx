@@ -1,8 +1,6 @@
-"use client";
-
-import Link from "next/link";
+"use client";import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Calendar, Users, CreditCard, X, Sun, Moon } from "lucide-react";
+import { LayoutDashboard, Calendar, Users, CreditCard, X, Sun, Moon, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
@@ -11,8 +9,8 @@ const menuItems = [
   { label: "Reservas", href: "/bookings", icon: Calendar },
   { label: "Clientes", href: "/customers", icon: Users },
   { label: "Pagos", href: "/payments", icon: CreditCard },
+  { label: "Perfil", href: "/profile", icon: User },
 ];
-
 const themes = [
   { id: "default", color: "#6366f1", label: "Default" },
   { id: "pink", color: "#ec4899", label: "Rosa" },

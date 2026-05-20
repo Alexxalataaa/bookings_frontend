@@ -10,11 +10,10 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("1234");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
     if (token) router.replace("/dashboard");
@@ -161,23 +160,7 @@ export default function LoginPage() {
               )}
             </button>
 
-            {/* Divider */}
-            <div className={styles.divider}></div>
 
-            {/* Demo Info */}
-            <div className={styles.demo}>
-              <p className={styles.demoTitle}>Credenciales de Demo</p>
-              <div className={styles.demoBox}>
-                <div className={styles.demoCred}>
-                  <span className={styles.demoLabel}>Usuario:</span>
-                  <code className={styles.demoCode}>admin</code>
-                </div>
-                <div className={styles.demoCred}>
-                  <span className={styles.demoLabel}>Contraseña:</span>
-                  <code className={styles.demoCode}>1234</code>
-                </div>
-              </div>
-            </div>
           </form>
         </div>
 
