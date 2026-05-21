@@ -110,15 +110,6 @@ export default function BookingsClient() {
     });
     return map;
   }, [customers]);
-
-  // Selected client for the create form
-  const selectedCustomer = useMemo(() => customers.find(c => c.id === createForm.customerId), [customers, createForm.customerId]);
-
-  // Selected client for the edit form
-  const selectedEditCustomer = useMemo(() => customers.find(c => c.id === editForm.customerId), [customers, editForm.customerId]);
-
-// Duplicate definitions removed
-
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingBookingId, setEditingBookingId] = useState<number | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
