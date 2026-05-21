@@ -110,6 +110,10 @@ export default function BookingsClient() {
     });
     return map;
   }, [customers]);
+
+  // Derive selected customer for create and edit forms
+  const selectedCustomer = useMemo(() => customers.find(c => c.id === createForm.customerId), [customers, createForm.customerId]);
+  const selectedEditCustomer = useMemo(() => customers.find(c => c.id === editForm.customerId), [customers, editForm.customerId]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingBookingId, setEditingBookingId] = useState<number | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
