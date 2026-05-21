@@ -220,6 +220,17 @@ export default function BookingsClient() {
     setSuccessMessage("");
     setErrorMessage("");
 
+    // Validate client and business selection
+    if (!createForm.customerId) {
+      setErrorMessage('Seleccione un cliente antes de crear la reserva.');
+      setLoadingCreate(false);
+      return;
+    }
+    if (!createForm.businessId) {
+      setErrorMessage('No se pudo obtener el negocio del cliente seleccionado.');
+      setLoadingCreate(false);
+      return;
+    }
     try {
       const created = await createAppointment(createForm);
       setBookings((prev) => [created, ...prev]);
@@ -410,27 +421,34 @@ export default function BookingsClient() {
                   <option value="confirmed">Confirmada</option>
                   <option value="paid">Pagada</option>
                 </select>
-                <input
-                  className="input"
-                  type="number"
-                  min={1}
+                                <select
+                  className="select"
                   value={createForm.customerId}
-                  onChange={(e) =>
-                    updateCreateForm("customerId", Number(e.target.value))
-                  }
-                  placeholder="Nº de cliente"
+                  onChange={(e) => {
+                    const selectedId = Number(e.target.value);
+                    const selectedCustomer = customers.find(c => c.id === selectedId);
+                    updateCreateForm("customerId", selectedId);
+                    // For demo purposes, set businessId to same as customerId (replace with real mapping when available)
+                    if (selectedCustomer) {
+                      updateCreateForm("businessId", selectedId);
+                    }
+                  }}
                   required
-                />
+                >
+                  <option value="" disabled>Selecciona cliente</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}{c.business ? ` (${c.business})` : ""}
+                    </option>
+                  ))}
+                </select>
+                {/* Auto‑populate business based on selected client */}
                 <input
                   className="input"
-                  type="number"
-                  min={1}
-                  value={createForm.businessId}
-                  onChange={(e) =>
-                    updateCreateForm("businessId", Number(e.target.value))
-                  }
-                  placeholder="Nº de negocio"
-                  required
+                  type="text"
+                  value={selectedCustomer?.business || ''}
+                  placeholder="Negocio"
+                  readOnly
                 />
                 <input
                   className="input"
@@ -495,27 +513,33 @@ export default function BookingsClient() {
                   <option value="confirmed">Confirmada</option>
                   <option value="paid">Pagada</option>
                 </select>
-                <input
-                  className="input"
-                  type="number"
-                  min={1}
+                                <select
+                  className="select"
                   value={editForm.customerId}
-                  onChange={(e) =>
-                    updateEditForm("customerId", Number(e.target.value))
-                  }
-                  placeholder="Nº de cliente"
+                  onChange={(e) => {
+                    const selectedId = Number(e.target.value);
+                    const selectedCustomer = customers.find(c => c.id === selectedId);
+                    updateEditForm("customerId", selectedId);
+                    // For demo purposes, set businessId to same as customerId (replace with real mapping when available)
+                    if (selectedCustomer) {
+                      updateEditForm("businessId", selectedId);
+                    }
+                  }}
                   required
-                />
+                >
+                  <option value="" disabled>Selecciona cliente</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}{c.business ? ` (${c.business})` : ""}
+                    </option>
+                  ))}
+                </select>
                 <input
                   className="input"
-                  type="number"
-                  min={1}
-                  value={editForm.businessId}
-                  onChange={(e) =>
-                    updateEditForm("businessId", Number(e.target.value))
-                  }
-                  placeholder="Nº de negocio"
-                  required
+                  type="text"
+                  value={selectedEditCustomer?.business || ''}
+                  placeholder="Negocio"
+                  readOnly
                 />
                 <input
                   className="input"
