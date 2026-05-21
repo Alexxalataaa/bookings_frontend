@@ -6,12 +6,14 @@ import type {
   BookingStatus,
   CreateBookingDto,
   UpdateBookingDto,
+  Customer,
 } from "@/lib/api";
 import {
   createAppointment,
   deleteAppointment,
   updateAppointment,
   getAppointments,
+  getCustomers,
 } from "@/lib/api";
 import { useEffect } from "react";
 import { 
@@ -21,7 +23,7 @@ import {
   CheckCircle, 
   CreditCard, 
   Trash2, 
-  Edit3, 
+  Edit3, Search, 
   X,
   AlertTriangle,
   Filter,
@@ -70,11 +72,15 @@ function formatDate(date: string) {
 export default function BookingsClient() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
   useEffect(() => {
-    getAppointments()
-      .then(setBookings)
-      .catch((err) => console.error("Error fetching bookings:", err))
+    Promise.all([getAppointments(), getCustomers()])
+      .then(([appointments, customersData]) => {
+        setBookings(appointments);
+        setCustomers(customersData);
+      })
+      .catch((err) => console.error("Error fetching data:", err))
       .finally(() => setInitialLoading(false));
   }, []);
 
@@ -95,15 +101,47 @@ export default function BookingsClient() {
   const [loadingEdit, setLoadingEdit] = useState(false);
   const [deletingBookingId, setDeletingBookingId] = useState<number | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
+  const [search, setSearch] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const customersMap = useMemo(() => {
+    const map: Record<number, Customer> = {};
+    customers.forEach((c) => {
+      map[c.id] = c;
+    });
+    return map;
+  }, [customers]);
+
+  // Selected client for the create form
+  const selectedCustomer = useMemo(() => customers.find(c => c.id === createForm.customerId), [customers, createForm.customerId]);
+
+  // Selected client for the edit form
+  const selectedEditCustomer = useMemo(() => customers.find(c => c.id === editForm.customerId), [customers, editForm.customerId]);
+
+// Duplicate definitions removed
+
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingBookingId, setEditingBookingId] = useState<number | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
 
   const filteredBookings = useMemo(() => {
-    if (statusFilter === "all") return bookings;
-    return bookings.filter((booking) => booking.status === statusFilter);
-  }, [bookings, statusFilter]);
+    let result = bookings;
+    if (statusFilter !== "all") {
+      result = result.filter((booking) => booking.status === statusFilter);
+    }
+    if (search.trim() !== "") {
+      const lower = search.toLowerCase();
+      result = result.filter((booking) => {
+        const cust = customersMap[booking.customerId];
+        const business = cust?.business || "";
+        return (
+          booking.serviceName.toLowerCase().includes(lower) ||
+          cust?.name?.toLowerCase().includes(lower) ||
+          business.toLowerCase().includes(lower)
+        );
+      });
+    }
+    return result;
+  }, [bookings, statusFilter, search, customersMap]);
 
   const totalCount = bookings.length;
   const pendingCount = bookings.filter((b) => b.status === "pending").length;
@@ -191,6 +229,17 @@ export default function BookingsClient() {
     setSuccessMessage("");
     setErrorMessage("");
 
+    // Validate client and business selection
+    if (!createForm.customerId) {
+      setErrorMessage('Seleccione un cliente antes de crear la reserva.');
+      setLoadingCreate(false);
+      return;
+    }
+    if (!createForm.businessId) {
+      setErrorMessage('No se pudo obtener el negocio del cliente seleccionado.');
+      setLoadingCreate(false);
+      return;
+    }
     try {
       const created = await createAppointment(createForm);
       setBookings((prev) => [created, ...prev]);
@@ -381,27 +430,34 @@ export default function BookingsClient() {
                   <option value="confirmed">Confirmada</option>
                   <option value="paid">Pagada</option>
                 </select>
-                <input
-                  className="input"
-                  type="number"
-                  min={1}
+                                <select
+                  className="select"
                   value={createForm.customerId}
-                  onChange={(e) =>
-                    updateCreateForm("customerId", Number(e.target.value))
-                  }
-                  placeholder="Nº de cliente"
+                  onChange={(e) => {
+                    const selectedId = Number(e.target.value);
+                    const selectedCustomer = customers.find(c => c.id === selectedId);
+                    updateCreateForm("customerId", selectedId);
+                    // For demo purposes, set businessId to same as customerId (replace with real mapping when available)
+                    if (selectedCustomer) {
+                      updateCreateForm("businessId", selectedId);
+                    }
+                  }}
                   required
-                />
+                >
+                  <option value="" disabled>Selecciona cliente</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}{c.business ? ` (${c.business})` : ""}
+                    </option>
+                  ))}
+                </select>
+                {/* Auto‑populate business based on selected client */}
                 <input
                   className="input"
-                  type="number"
-                  min={1}
-                  value={createForm.businessId}
-                  onChange={(e) =>
-                    updateCreateForm("businessId", Number(e.target.value))
-                  }
-                  placeholder="Nº de negocio"
-                  required
+                  type="text"
+                  value={selectedCustomer?.business || ''}
+                  placeholder="Negocio"
+                  readOnly
                 />
                 <input
                   className="input"
@@ -466,27 +522,33 @@ export default function BookingsClient() {
                   <option value="confirmed">Confirmada</option>
                   <option value="paid">Pagada</option>
                 </select>
-                <input
-                  className="input"
-                  type="number"
-                  min={1}
+                                <select
+                  className="select"
                   value={editForm.customerId}
-                  onChange={(e) =>
-                    updateEditForm("customerId", Number(e.target.value))
-                  }
-                  placeholder="Nº de cliente"
+                  onChange={(e) => {
+                    const selectedId = Number(e.target.value);
+                    const selectedCustomer = customers.find(c => c.id === selectedId);
+                    updateEditForm("customerId", selectedId);
+                    // For demo purposes, set businessId to same as customerId (replace with real mapping when available)
+                    if (selectedCustomer) {
+                      updateEditForm("businessId", selectedId);
+                    }
+                  }}
                   required
-                />
+                >
+                  <option value="" disabled>Selecciona cliente</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}{c.business ? ` (${c.business})` : ""}
+                    </option>
+                  ))}
+                </select>
                 <input
                   className="input"
-                  type="number"
-                  min={1}
-                  value={editForm.businessId}
-                  onChange={(e) =>
-                    updateEditForm("businessId", Number(e.target.value))
-                  }
-                  placeholder="Nº de negocio"
-                  required
+                  type="text"
+                  value={selectedEditCustomer?.business || ''}
+                  placeholder="Negocio"
+                  readOnly
                 />
                 <input
                   className="input"
@@ -563,6 +625,14 @@ export default function BookingsClient() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <Search size={16} style={{ color: "var(--text-muted)" }} />
+            <input
+              className="input"
+              placeholder="Buscar reservas..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ marginLeft: 8, flex: 1, maxWidth: "200px" }}
+            />
             <Filter size={16} style={{ color: "var(--text-muted)" }} />
             <div className="filter-row" style={{ background: "rgba(255,255,255,0.03)", padding: "4px", borderRadius: "12px", border: "1px solid var(--border)" }}>
               {["all", "pending", "confirmed", "paid"].map((f) => (
@@ -623,9 +693,9 @@ export default function BookingsClient() {
                   </td>
                   <td style={{ fontWeight: 500 }}>{booking.serviceName}</td>
                   <td>
-                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                      C: {booking.customerId} / B: {booking.businessId}
-                    </span>
+                     <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                       {customersMap[booking.customerId]?.name || ''} / {customersMap[booking.customerId]?.business || ''}
+                     </span>
                   </td>
                   <td><StatusBadge status={booking.status} /></td>
                   <td>
