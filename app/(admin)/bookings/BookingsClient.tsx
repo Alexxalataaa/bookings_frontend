@@ -685,7 +685,7 @@ export default function BookingsClient() {
                   <td style={{ fontWeight: 500 }}>{booking.serviceName}</td>
                   <td>
                      <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                       {customersMap[booking.customerId]?.name || `C: ${booking.customerId}`} / {customersMap[booking.customerId]?.business || `B: ${booking.businessId}`}
+                       {customersMap[booking.customerId]?.name || ''} / {customersMap[booking.customerId]?.business || ''}
                      </span>
                   </td>
                   <td><StatusBadge status={booking.status} /></td>
