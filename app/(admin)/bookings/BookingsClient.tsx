@@ -6,12 +6,14 @@ import type {
   BookingStatus,
   CreateBookingDto,
   UpdateBookingDto,
+  Customer,
 } from "@/lib/api";
 import {
   createAppointment,
   deleteAppointment,
   updateAppointment,
   getAppointments,
+  getCustomers,
 } from "@/lib/api";
 import { useEffect } from "react";
 import { 
@@ -21,7 +23,7 @@ import {
   CheckCircle, 
   CreditCard, 
   Trash2, 
-  Edit3, 
+  Edit3, Search, 
   X,
   AlertTriangle,
   Filter,
@@ -70,11 +72,15 @@ function formatDate(date: string) {
 export default function BookingsClient() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
   useEffect(() => {
-    getAppointments()
-      .then(setBookings)
-      .catch((err) => console.error("Error fetching bookings:", err))
+    Promise.all([getAppointments(), getCustomers()])
+      .then(([appointments, customersData]) => {
+        setBookings(appointments);
+        setCustomers(customersData);
+      })
+      .catch((err) => console.error("Error fetching data:", err))
       .finally(() => setInitialLoading(false));
   }, []);
 
@@ -95,15 +101,38 @@ export default function BookingsClient() {
   const [loadingEdit, setLoadingEdit] = useState(false);
   const [deletingBookingId, setDeletingBookingId] = useState<number | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
+  const [search, setSearch] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const customersMap = useMemo(() => {
+    const map: Record<number, Customer> = {};
+    customers.forEach((c) => {
+      map[c.id] = c;
+    });
+    return map;
+  }, [customers]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingBookingId, setEditingBookingId] = useState<number | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
 
   const filteredBookings = useMemo(() => {
-    if (statusFilter === "all") return bookings;
-    return bookings.filter((booking) => booking.status === statusFilter);
-  }, [bookings, statusFilter]);
+    let result = bookings;
+    if (statusFilter !== "all") {
+      result = result.filter((booking) => booking.status === statusFilter);
+    }
+    if (search.trim() !== "") {
+      const lower = search.toLowerCase();
+      result = result.filter((booking) => {
+        const cust = customersMap[booking.customerId];
+        const business = cust?.business || "";
+        return (
+          booking.serviceName.toLowerCase().includes(lower) ||
+          cust?.name?.toLowerCase().includes(lower) ||
+          business.toLowerCase().includes(lower)
+        );
+      });
+    }
+    return result;
+  }, [bookings, statusFilter, search, customersMap]);
 
   const totalCount = bookings.length;
   const pendingCount = bookings.filter((b) => b.status === "pending").length;
@@ -563,6 +592,14 @@ export default function BookingsClient() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <Search size={16} style={{ color: "var(--text-muted)" }} />
+            <input
+              className="input"
+              placeholder="Buscar reservas..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ marginLeft: 8, flex: 1, maxWidth: "200px" }}
+            />
             <Filter size={16} style={{ color: "var(--text-muted)" }} />
             <div className="filter-row" style={{ background: "rgba(255,255,255,0.03)", padding: "4px", borderRadius: "12px", border: "1px solid var(--border)" }}>
               {["all", "pending", "confirmed", "paid"].map((f) => (
@@ -623,9 +660,9 @@ export default function BookingsClient() {
                   </td>
                   <td style={{ fontWeight: 500 }}>{booking.serviceName}</td>
                   <td>
-                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                      C: {booking.customerId} / B: {booking.businessId}
-                    </span>
+                     <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                       {customersMap[booking.customerId]?.name || `C: ${booking.customerId}`} / {customersMap[booking.customerId]?.business || `B: ${booking.businessId}`}
+                     </span>
                   </td>
                   <td><StatusBadge status={booking.status} /></td>
                   <td>
