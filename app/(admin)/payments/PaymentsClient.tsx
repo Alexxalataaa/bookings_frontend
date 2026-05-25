@@ -16,7 +16,8 @@ import {
   CreditCard,
   Banknote,
   Smartphone,
-  Send
+  Send,
+  Download
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -160,6 +161,35 @@ export default function PaymentsClient() {
     }
   }
 
+  const handleExport = () => {
+    if (payments.length === 0) return;
+
+    const headers = ["ID", "Cliente", "Comercio", "Importe", "Método", "Fecha", "Estado"];
+    const rows = payments.map(p => [
+      p.id,
+      p.clientName,
+      p.businessName,
+      p.amount,
+      p.method,
+      p.date,
+      p.status === "paid" ? "Pagado" : "Pendiente"
+    ]);
+
+    const csvContent = [
+      headers.join(";"),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(";"))
+    ].join("\n");
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `cobros_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (initialLoading) {
     return (
       <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
@@ -181,14 +211,24 @@ export default function PaymentsClient() {
           <p>Supervisión financiera y registro de transacciones.</p>
         </div>
 
-        <button 
-          className="primary-btn" 
-          type="button" 
-          onClick={() => setIsFormOpen(true)}
-        >
-          <Plus size={18} />
-          <span>Registrar cobro</span>
-        </button>
+        <div style={{ display: "flex", gap: "12px" }}>
+          <button 
+            className="secondary-btn" 
+            type="button" 
+            onClick={handleExport}
+          >
+            <Download size={18} />
+            <span>Exportar</span>
+          </button>
+          <button 
+            className="primary-btn" 
+            type="button" 
+            onClick={() => setIsFormOpen(true)}
+          >
+            <Plus size={18} />
+            <span>Registrar cobro</span>
+          </button>
+        </div>
       </motion.section>
 
       <section className="kpi-grid">
