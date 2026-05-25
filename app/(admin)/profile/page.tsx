@@ -206,12 +206,6 @@ function ProfileContent() {
               <Shield size={14} style={{ color: "var(--primary)" }} /> Cuenta Administrador Principal
             </p>
           </div>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <div style={{ padding: "8px 14px", background: "rgba(255,255,255,0.05)", borderRadius: "8px", border: "1px solid var(--border)" }}>
-              <span style={{ display: "block", fontSize: "11px", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>ID Base Datos</span>
-              <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--primary)" }}>#{profile?.id}</span>
-            </div>
-          </div>
         </motion.div>
 
         {/* Change Credentials Panels */}
