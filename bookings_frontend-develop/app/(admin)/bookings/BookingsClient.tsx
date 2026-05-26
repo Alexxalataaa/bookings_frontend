@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import type {
   Booking,
   BookingStatus,
@@ -93,6 +93,27 @@ export default function BookingsClient({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingBookingId, setEditingBookingId] = useState<number | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+
+  const createFormRef = useRef<HTMLElement>(null);
+  const editFormRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (isCreateOpen && createFormRef.current) {
+      const timer = setTimeout(() => {
+        createFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isCreateOpen]);
+
+  useEffect(() => {
+    if (editingBookingId !== null && editFormRef.current) {
+      const timer = setTimeout(() => {
+        editFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [editingBookingId]);
 
   const filteredBookings = useMemo(() => {
     if (statusFilter === "all") return bookings;
@@ -327,6 +348,7 @@ export default function BookingsClient({
       <AnimatePresence>
         {isCreateOpen && (
           <motion.section 
+            ref={createFormRef}
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
@@ -412,6 +434,7 @@ export default function BookingsClient({
       <AnimatePresence>
         {editingBookingId !== null && (
           <motion.section 
+            ref={editFormRef}
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}

@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Customer, CreateCustomerDto, createCustomer, updateCustomer, deleteCustomer, getCustomers } from "@/lib/api";
-import { useEffect } from "react";
 import { 
   UserPlus, 
   Search, 
@@ -107,6 +106,16 @@ export default function CustomersClient() {
   }, []);
   const [search, setSearch] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const formRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (isFormOpen && formRef.current) {
+      const timer = setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isFormOpen]);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [formData, setFormData] = useState<CreateCustomerDto>({
     name: "",
@@ -246,6 +255,7 @@ export default function CustomersClient() {
       <AnimatePresence mode="wait">
         {isFormOpen && (
           <motion.section 
+            ref={formRef}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
