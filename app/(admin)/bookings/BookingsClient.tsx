@@ -69,6 +69,228 @@ function formatDate(date: string) {
   }
 }
 
+function CalendarView({
+  bookings,
+  customersMap,
+  onEdit,
+  onDelete,
+}: {
+  bookings: Booking[];
+  customersMap: Record<number, Customer>;
+  onEdit: (b: Booking) => void;
+  onDelete: (id: number) => void;
+}) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const monthNames = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const dayNames = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const bookingsByDate = useMemo(() => {
+    const map: Record<string, Booking[]> = {};
+    bookings.forEach((b) => {
+      if (!map[b.date]) map[b.date] = [];
+      map[b.date].push(b);
+    });
+    return map;
+  }, [bookings]);
+
+  const selectedBookings = selectedDay ? (bookingsByDate[selectedDay] || []) : [];
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  const statusColor: Record<string, string> = {
+    pending: "#f59e0b",
+    confirmed: "#6366f1",
+    paid: "#22c55e",
+  };
+
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < startOffset; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  return (
+    <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "flex-start" }}>
+      {/* Grid del calendario */}
+      <div style={{ flex: "1 1 480px", minWidth: 0 }}>
+        {/* Navegación de mes */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <button
+            type="button"
+            className="secondary-btn"
+            style={{ padding: "8px 18px", fontSize: 20, lineHeight: 1 }}
+            onClick={() => { setCurrentDate(new Date(year, month - 1, 1)); setSelectedDay(null); }}
+          >
+            ‹
+          </button>
+          <h4 style={{ fontWeight: 700, fontSize: 18, margin: 0 }}>
+            {monthNames[month]} {year}
+          </h4>
+          <button
+            type="button"
+            className="secondary-btn"
+            style={{ padding: "8px 18px", fontSize: 20, lineHeight: 1 }}
+            onClick={() => { setCurrentDate(new Date(year, month + 1, 1)); setSelectedDay(null); }}
+          >
+            ›
+          </button>
+        </div>
+
+        {/* Cabecera días */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
+          {dayNames.map((d) => (
+            <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", padding: "4px 0", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* Celdas */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+          {cells.map((day, idx) => {
+            if (!day) return <div key={`empty-${idx}`} style={{ minHeight: 70 }} />;
+            const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+            const dayBookings = bookingsByDate[dateStr] || [];
+            const isToday = dateStr === todayStr;
+            const isSelected = dateStr === selectedDay;
+            return (
+              <motion.div
+                key={dateStr}
+                whileHover={{ scale: 1.04 }}
+                onClick={() => setSelectedDay(isSelected ? null : dateStr)}
+                style={{
+                  minHeight: 70,
+                  borderRadius: 10,
+                  padding: "8px 6px",
+                  cursor: "pointer",
+                  background: isSelected
+                    ? "rgba(99,102,241,0.22)"
+                    : isToday
+                    ? "rgba(99,102,241,0.09)"
+                    : "rgba(255,255,255,0.03)",
+                  border: isSelected
+                    ? "1.5px solid var(--primary)"
+                    : isToday
+                    ? "1.5px solid rgba(99,102,241,0.4)"
+                    : "1.5px solid var(--border)",
+                  transition: "all 0.2s",
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: isToday ? 700 : 500, color: isToday ? "var(--primary)" : "var(--text)", marginBottom: 4 }}>
+                  {day}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                  {dayBookings.slice(0, 3).map((b) => (
+                    <div
+                      key={b.id}
+                      title={`${b.time} – ${b.serviceName}`}
+                      style={{ width: 8, height: 8, borderRadius: "50%", background: statusColor[b.status] || "#6366f1", flexShrink: 0 }}
+                    />
+                  ))}
+                  {dayBookings.length > 3 && (
+                    <span style={{ fontSize: 9, color: "var(--text-muted)", lineHeight: "8px" }}>+{dayBookings.length - 3}</span>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        {/* Leyenda */}
+        <div style={{ display: "flex", gap: 16, marginTop: 16, flexWrap: "wrap" }}>
+          {[
+            { color: "#f59e0b", label: "Pendiente" },
+            { color: "#6366f1", label: "Confirmada" },
+            { color: "#22c55e", label: "Pagada" },
+          ].map(({ color, label }) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-muted)" }}>
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: color }} />
+              {label}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Panel del día seleccionado */}
+      <AnimatePresence>
+        {selectedDay && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            style={{
+              flex: "0 0 280px",
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid var(--border)",
+              borderRadius: 16,
+              padding: 20,
+              alignSelf: "flex-start",
+            }}
+          >
+            <h4 style={{ fontWeight: 700, fontSize: 15, margin: "0 0 16px" }}>
+              {new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(
+                new Date(selectedDay + "T12:00:00")
+              )}
+            </h4>
+            {selectedBookings.length === 0 ? (
+              <p style={{ color: "var(--text-muted)", fontSize: 13 }}>No hay reservas este día.</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {selectedBookings.map((b) => (
+                  <div
+                    key={b.id}
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid var(--border)",
+                      borderLeft: `3px solid ${statusColor[b.status] || "#6366f1"}`,
+                      borderRadius: 10,
+                      padding: "10px 12px",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                      <span style={{ fontWeight: 700, fontSize: 13, color: "var(--primary)" }}>#{b.id}</span>
+                      <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{b.time}</span>
+                    </div>
+                    <p style={{ fontWeight: 600, fontSize: 13, margin: "2px 0" }}>{b.serviceName}</p>
+                    <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "2px 0" }}>
+                      {customersMap[b.customerId]?.name || ""}
+                    </p>
+                    <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                      <button
+                        type="button"
+                        className="secondary-btn"
+                        style={{ padding: "4px 10px", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}
+                        onClick={() => onEdit(b)}
+                      >
+                        <Edit3 size={12} /> Editar
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary-btn"
+                        style={{ padding: "4px 10px", fontSize: 12, color: "var(--accent)" }}
+                        onClick={() => onDelete(b.id)}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function BookingsClient() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -103,6 +325,7 @@ export default function BookingsClient() {
   const [successMessage, setSuccessMessage] = useState("");
   const [search, setSearch] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const customersMap = useMemo(() => {
     const map: Record<number, Customer> = {};
     customers.forEach((c) => {
@@ -619,7 +842,24 @@ export default function BookingsClient() {
               {filteredBookings.length} resultados
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            {/* Toggle Lista / Calendario */}
+            <div style={{ display: "flex", background: "rgba(255,255,255,0.03)", padding: "4px", borderRadius: "12px", border: "1px solid var(--border)" }}>
+              <button
+                type="button"
+                style={{ padding: "8px 14px", borderRadius: "10px", border: "none", background: viewMode === "list" ? "var(--primary)" : "transparent", color: viewMode === "list" ? "white" : "var(--text-muted)", cursor: "pointer", fontWeight: 600, fontSize: "13px", display: "flex", alignItems: "center", gap: 6, transition: "all 0.2s" }}
+                onClick={() => setViewMode("list")}
+              >
+                <List size={14} /> Lista
+              </button>
+              <button
+                type="button"
+                style={{ padding: "8px 14px", borderRadius: "10px", border: "none", background: viewMode === "calendar" ? "var(--primary)" : "transparent", color: viewMode === "calendar" ? "white" : "var(--text-muted)", cursor: "pointer", fontWeight: 600, fontSize: "13px", display: "flex", alignItems: "center", gap: 6, transition: "all 0.2s" }}
+                onClick={() => setViewMode("calendar")}
+              >
+                <CalendarIcon size={14} /> Calendario
+              </button>
+            </div>
             <Search size={16} style={{ color: "var(--text-muted)" }} />
             <input
               className="input"
@@ -658,6 +898,7 @@ export default function BookingsClient() {
         {successMessage && <div className="message-success" style={{ marginBottom: 20 }}>{successMessage}</div>}
         {errorMessage && <div className="message-error" style={{ marginBottom: 20 }}>{errorMessage}</div>}
 
+        {viewMode === "list" ? (
         <div className="table-scroll-wrapper">
           <table className="data-table">
             <thead>
@@ -708,6 +949,14 @@ export default function BookingsClient() {
             </tbody>
           </table>
         </div>
+        ) : (
+          <CalendarView
+            bookings={filteredBookings}
+            customersMap={customersMap}
+            onEdit={openEditForm}
+            onDelete={openDeleteModal}
+          />
+        )}
       </motion.section>
     </motion.div>
   );

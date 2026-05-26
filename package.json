@@ -9,13 +9,18 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^2.12.0",
+    "clsx": "^2.1.1",
+    "eventemitter3": "^5.0.4",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.14.0",
     "next": "16.2.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "recharts": "^3.8.1",
-    "socket.io-client": "^4.8.3"
+    "reselect": "^5.2.0",
+    "socket.io-client": "^4.8.3",
+    "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
