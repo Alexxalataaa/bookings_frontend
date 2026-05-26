@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Payment, CreatePaymentDto, createPayment, updatePayment, deletePayment, getPayments } from "@/lib/api";
-import { useEffect } from "react";
 import { 
   Wallet, 
   TrendingUp, 
@@ -104,10 +103,27 @@ export default function PaymentsClient() {
       .finally(() => setInitialLoading(false));
   }, []);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formData, setFormData] = useState<CreatePaymentDto>({
+  const formRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (isFormOpen && formRef.current) {
+      const timer = setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isFormOpen]);
+  const [formData, setFormData] = useState<{
+    clientName: string;
+    businessName: string;
+    amount: number | "";
+    method: string;
+    date: string;
+    status: "pending" | "paid";
+  }>({
     clientName: "",
     businessName: "",
-    amount: 0,
+    amount: "",
     method: "Tarjeta",
     date: new Date().toISOString().split("T")[0],
     status: "paid",
@@ -133,13 +149,16 @@ export default function PaymentsClient() {
     e.preventDefault();
     setLoading(true);
     try {
-      const created = await createPayment(formData);
+      const created = await createPayment({
+        ...formData,
+        amount: formData.amount === "" ? 0 : Number(formData.amount),
+      });
       setPayments([created, ...payments]);
       setIsFormOpen(false);
       setFormData({
         clientName: "",
         businessName: "",
-        amount: 0,
+        amount: "",
         method: "Tarjeta",
         date: new Date().toISOString().split("T")[0],
         status: "paid",
@@ -263,6 +282,7 @@ export default function PaymentsClient() {
       <AnimatePresence>
         {isFormOpen && (
           <motion.section 
+            ref={formRef}
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
@@ -305,7 +325,10 @@ export default function PaymentsClient() {
                     step="0.01"
                     placeholder="0.00"
                     value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData({ ...formData, amount: val === "" ? "" : Number(val) });
+                    }}
                     required
                   />
                 </div>
