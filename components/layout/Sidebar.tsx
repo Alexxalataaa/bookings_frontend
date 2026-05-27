@@ -1,16 +1,30 @@
-"use client";import Link from "next/link";
+"use client";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Calendar, Users, CreditCard, X, Sun, Moon, User } from "lucide-react";
+import { LayoutDashboard, Calendar, Users, CreditCard, X, Sun, Moon, User, Search, History, Settings, FileCode2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
-const menuItems = [
+const clientMenuItems = [
+  { label: "Buscador", href: "/dashboard", icon: Search },
+  { label: "Mis Reservas", href: "/bookings", icon: History },
+  { label: "Mi Perfil", href: "/profile", icon: User },
+];
+
+const businessMenuItems = [
   { label: "Tablero", href: "/dashboard", icon: LayoutDashboard },
   { label: "Reservas", href: "/bookings", icon: Calendar },
   { label: "Clientes", href: "/customers", icon: Users },
   { label: "Pagos", href: "/payments", icon: CreditCard },
-  { label: "Perfil", href: "/profile", icon: User },
+  { label: "Perfil Negocio", href: "/profile", icon: User },
 ];
+
+const superadminMenuItems = [
+  { label: "Tablero Global", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Logs de Actividad", href: "/bookings", icon: FileCode2 },
+  { label: "Administradores", href: "/profile", icon: Settings },
+];
+
 const themes = [
   { id: "default", color: "#6366f1", label: "Default" },
   { id: "pink", color: "#ec4899", label: "Rosa" },
@@ -23,12 +37,18 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean, onClose:
   const pathname = usePathname();
   const [activeTheme, setActiveTheme] = useState("default");
   const [activeBrightness, setActiveBrightness] = useState("dark");
+  const [userRole, setUserRole] = useState<"client" | "business" | "superadmin">("business");
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("app-theme") || "default";
     setActiveTheme(savedTheme);
     const savedBrightness = localStorage.getItem("app-brightness") || "dark";
     setActiveBrightness(savedBrightness);
+
+    const savedRole = localStorage.getItem("user_role") as any;
+    if (savedRole) {
+      setUserRole(savedRole);
+    }
   }, []);
 
   const changeTheme = (themeId: string) => {
@@ -42,13 +62,22 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean, onClose:
     }
   };
 
+  const menuItems = 
+    userRole === "client" 
+      ? clientMenuItems 
+      : userRole === "superadmin" 
+        ? superadminMenuItems 
+        : businessMenuItems;
+
   return (
     <aside className={`admin-sidebar ${isOpen ? "admin-sidebar--open" : ""}`}>
       <div className="admin-sidebar__brand">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
           <div>
             <h2 className="admin-sidebar__title">BookFlow</h2>
-            <p className="admin-sidebar__subtitle">Control Center</p>
+            <p className="admin-sidebar__subtitle" style={{ fontSize: "11px", color: "var(--primary)", fontWeight: "bold" }}>
+              {userRole === "client" ? "Panel Cliente" : userRole === "superadmin" ? "Super Panel" : "Panel Negocio"}
+            </p>
           </div>
           <button className="mobile-toggle" onClick={onClose} style={{ marginRight: 0 }}>
             <X size={20} />
