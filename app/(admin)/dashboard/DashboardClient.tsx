@@ -2,39 +2,39 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  getBusinesses, 
-  getBusinessesAll, 
-  getMyBusinesses, 
-  getBusiness, 
-  createBusiness, 
-  updateBusiness, 
-  deleteBusiness, 
-  getServices, 
-  createService, 
-  updateService, 
-  deleteService, 
-  getAppointments, 
-  updateAppointment, 
-  deleteAppointment, 
-  getPayments, 
-  Business, 
-  Service, 
-  Booking, 
-  Payment 
+import {
+  getBusinesses,
+  getBusinessesAll,
+  getMyBusinesses,
+  getBusiness,
+  createBusiness,
+  updateBusiness,
+  deleteBusiness,
+  getServices,
+  createService,
+  updateService,
+  deleteService,
+  getAppointments,
+  updateAppointment,
+  deleteAppointment,
+  getPayments,
+  Business,
+  Service,
+  Booking,
+  Payment
 } from "@/lib/api";
-import { 
-  Calendar as CalendarIcon, 
-  CreditCard, 
-  Clock, 
-  Users, 
-  Search, 
-  Filter, 
-  Star, 
-  MapPin, 
-  Activity, 
-  TrendingUp, 
-  Scissors, 
+import {
+  Calendar as CalendarIcon,
+  CreditCard,
+  Clock,
+  Users,
+  Search,
+  Filter,
+  Star,
+  MapPin,
+  Activity,
+  TrendingUp,
+  Scissors,
   Sparkles,
   ShieldCheck,
   Ban,
@@ -52,14 +52,14 @@ import {
   Briefcase
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, 
-  AreaChart, Area, PieChart, Pie, Cell 
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
+  AreaChart, Area, PieChart, Pie, Cell
 } from "recharts";
 
 export default function DashboardClient() {
   const router = useRouter();
-  
+
   // Auth state
   const [userRole, setUserRole] = useState<"client" | "business" | "superadmin">("business");
   const [userName, setUserName] = useState("Usuario Premium");
@@ -120,7 +120,7 @@ export default function DashboardClient() {
     if (role === "client") name = "Cliente Premium";
     else if (role === "business") name = "Propietario de Negocios";
     else if (role === "superadmin") name = "Administrador Principal";
-    
+
     localStorage.setItem("user_name", name);
     setUserRole(role);
     setUserName(name);
@@ -155,7 +155,7 @@ export default function DashboardClient() {
         // Fetch all businesses for platform management
         const businesses = await getBusinessesAll();
         setSuperadminBusinesses(businesses);
-        
+
         // Mock audit logs
         setActivityLogs([
           { id: 1, timestamp: "12:44:11", user: "Propietario", action: "Acceso", details: "Inicio sesión del dueño del negocio" },
@@ -173,7 +173,7 @@ export default function DashboardClient() {
   // Handle Switch Business
   async function selectBusiness(business: Business) {
     setSelectedBusiness(business);
-    
+
     // Load setting form fields
     setEditBizName(business.name);
     setEditBizPhone(business.phone || "");
@@ -184,7 +184,7 @@ export default function DashboardClient() {
     setEditBizDesc(business.description || "");
     setEditBizImage(business.image || "");
     setEditBizLogo(business.logo || "");
-    
+
     const parsedHours = business.hours ? JSON.parse(business.hours) : { monFri: "09:00 - 18:00", sat: "09:00 - 14:00", sun: "Cerrado" };
     setEditBizHours(parsedHours);
 
@@ -193,7 +193,7 @@ export default function DashboardClient() {
       const bookings = await getAppointments(business.id);
       const services = await getServices(business.id);
       const payments = await getPayments(undefined, business.id);
-      
+
       setBusinessBookings(bookings);
       setBusinessServices(services);
       setBusinessPayments(payments);
@@ -232,11 +232,11 @@ export default function DashboardClient() {
       const updatedList = await getMyBusinesses();
       setOwnedBusinesses(updatedList);
       setShowCreateBiz(false);
-      
+
       // Select the newly created business
       const match = updatedList.find(b => b.id === newBiz.id) || newBiz;
       await selectBusiness(match);
-      
+
       // Reset form
       setNewBizName("");
       setNewBizStreet("");
@@ -271,11 +271,11 @@ export default function DashboardClient() {
       });
 
       setSettingsSuccess(true);
-      
+
       // Reload business switcher list and details
       const list = await getMyBusinesses();
       setOwnedBusinesses(list);
-      
+
       const refreshed = list.find(b => b.id === selectedBusiness.id) || updated;
       setSelectedBusiness(refreshed);
 
@@ -313,7 +313,7 @@ export default function DashboardClient() {
       // Reload services list
       const services = await getServices(selectedBusiness.id);
       setBusinessServices(services);
-      
+
       // Reset service form
       setServiceName("");
       setServicePrice("");
@@ -379,7 +379,7 @@ export default function DashboardClient() {
       await updateBusiness(businessId, { isSuspended: !target.isSuspended });
       const list = await getBusinessesAll();
       setSuperadminBusinesses(list);
-      
+
       // Update local logs
       const act = target.isSuspended ? "Reactivar Negocio" : "Suspender Negocio";
       setActivityLogs(prev => [
@@ -456,9 +456,9 @@ export default function DashboardClient() {
 
   // Filtered Client Businesses
   const filteredBusinesses = allBusinesses.filter(b => {
-    const matchesSearch = b.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          (b.city?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-                          b.category.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (b.city?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      b.category.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === "Todos" || b.category === selectedCategory;
     const matchesCity = selectedCity === "Todos" || b.city === selectedCity;
     return matchesSearch && matchesCategory && matchesCity;
@@ -466,11 +466,11 @@ export default function DashboardClient() {
 
   return (
     <div className="page-stack">
-      
+
       {/* -------------------- 1. CLIENT VIEWS -------------------- */}
       {userRole === "client" && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="page-stack">
-          
+
           <section className="page-hero" style={{ background: "linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.04) 100%)", border: "1px solid rgba(99, 102, 241, 0.2)" }}>
             <div style={{ maxWidth: "600px" }}>
               <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(99, 102, 241, 0.15)", padding: "6px 12px", borderRadius: "20px", fontSize: "12px", color: "var(--primary)", fontWeight: "bold", marginBottom: "16px" }}>
@@ -494,12 +494,12 @@ export default function DashboardClient() {
             <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
               <div style={{ position: "relative", flex: 1, minWidth: "260px" }}>
                 <Search size={18} style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="input" 
-                  placeholder="Buscar peluquería, masajes, estética, barbería..." 
+                  className="input"
+                  placeholder="Buscar peluquería, masajes, estética, barbería..."
                   style={{ paddingLeft: "48px" }}
                 />
               </div>
@@ -530,9 +530,16 @@ export default function DashboardClient() {
             <div className="customer-grid">
               {filteredBusinesses.map((b) => (
                 <div key={b.id} className="customer-card" style={{ display: "flex", flexDirection: "column", height: "100%", gap: "16px", overflow: "hidden", padding: "0", background: "var(--surface)" }}>
-                  
+
                   <div style={{ position: "relative", height: "180px", width: "100%" }}>
-                    <img src={b.image} alt={b.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    {b.image ? (
+                      <img src={b.image} alt={b.name} style={{ width: "100%", height: "180px", objectFit: "cover" }} />
+                    ) : (
+                      <div style={{ width: "100%", height: "180px", background: "#e5e7eb", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ color: "#9ca3af" }}>{b.name}</span>
+                      </div>
+
+                    )}
                     <span style={{ position: "absolute", top: "12px", right: "12px", background: "rgba(11, 13, 17, 0.8)", backdropFilter: "blur(4px)", padding: "4px 8px", borderRadius: "6px", fontSize: "12px", fontWeight: "bold", display: "flex", alignItems: "center", gap: "4px", color: "var(--warning)" }}>
                       <Star size={14} fill="currentColor" /> {b.rating}
                     </span>
@@ -553,10 +560,10 @@ export default function DashboardClient() {
                       <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
                         Saber más y horarios
                       </span>
-                      
+
                       {/* CRITICAL CHANGE: User opens a dedicated landing page instead of a small card modal */}
-                      <button 
-                        className="primary-btn" 
+                      <button
+                        className="primary-btn"
                         onClick={() => router.push(`/business/${b.id}`)}
                         style={{ padding: "8px 16px", fontSize: "12px" }}
                       >
@@ -576,10 +583,10 @@ export default function DashboardClient() {
       {/* -------------------- 2. BUSINESS VIEWS (OWNER DASHBOARD) -------------------- */}
       {userRole === "business" && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="page-stack">
-          
+
           {/* Header Switcher & Create Business Button */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-            
+
             {/* Active Business Switcher */}
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <div style={{ background: "rgba(99,102,241,0.1)", color: "var(--primary)", padding: "10px", borderRadius: "12px" }}>
@@ -588,8 +595,8 @@ export default function DashboardClient() {
               <div>
                 <p style={{ margin: 0, fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "bold" }}>Mi Negocio Activo</p>
                 {ownedBusinesses.length > 0 ? (
-                  <select 
-                    value={selectedBusiness?.id || ""} 
+                  <select
+                    value={selectedBusiness?.id || ""}
                     onChange={(e) => {
                       const biz = ownedBusinesses.find(b => b.id === Number(e.target.value));
                       if (biz) selectBusiness(biz);
@@ -610,8 +617,8 @@ export default function DashboardClient() {
             {/* Dashboard Tabs / Create business */}
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
               {selectedBusiness && (
-                <button 
-                  className="secondary-btn" 
+                <button
+                  className="secondary-btn"
                   onClick={() => setShowSettingsTab(!showSettingsTab)}
                   style={{ display: "flex", gap: "8px", alignItems: "center", borderColor: showSettingsTab ? "var(--primary)" : "var(--border)" }}
                 >
@@ -620,8 +627,8 @@ export default function DashboardClient() {
                 </button>
               )}
 
-              <button 
-                className="primary-btn" 
+              <button
+                className="primary-btn"
                 onClick={() => setShowCreateBiz(true)}
                 style={{ display: "flex", gap: "8px", alignItems: "center" }}
               >
@@ -709,7 +716,7 @@ export default function DashboardClient() {
                   <h3 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "20px" }}>Ajustes y Perfil de {selectedBusiness.name}</h3>
 
                   <form onSubmit={handleSaveSettings} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                    
+
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }} className="responsive-profile-grid">
                       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                         <div>
@@ -792,7 +799,7 @@ export default function DashboardClient() {
               ) : (
                 /* DASHBOARD STATS TAB */
                 <div className="page-stack">
-                  
+
                   {/* Dynamic KPIs per business */}
                   <section className="kpi-grid">
                     <div className="kpi-card">
@@ -833,7 +840,7 @@ export default function DashboardClient() {
 
                   {/* Analytics Charts */}
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "24px" }}>
-                    
+
                     {/* Revenue Line Chart */}
                     <div className="section-card" style={{ height: "360px" }}>
                       <h4 style={{ fontSize: "16px", fontWeight: "bold", marginBottom: "16px" }}>Histórico de Ingresos</h4>
@@ -841,8 +848,8 @@ export default function DashboardClient() {
                         <AreaChart data={getRevenueChartData()}>
                           <defs>
                             <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.4}/>
-                              <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
+                              <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.4} />
+                              <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
@@ -956,7 +963,7 @@ export default function DashboardClient() {
                   {/* Bookings Management List */}
                   <section className="section-card">
                     <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" }}>Gestión de Reservas ({businessBookings.length})</h3>
-                    
+
                     <div className="table-scroll-wrapper">
                       <table className="data-table">
                         <thead>
@@ -1039,7 +1046,7 @@ export default function DashboardClient() {
       {/* -------------------- 3. SUPERADMIN VIEWS -------------------- */}
       {userRole === "superadmin" && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="page-stack">
-          
+
           <section className="page-hero" style={{ background: "linear-gradient(135deg, rgba(244, 63, 94, 0.08) 0%, rgba(99, 102, 241, 0.04) 100%)", border: "1px solid rgba(255, 255, 255, 0.05)" }}>
             <div>
               <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(99, 102, 241, 0.15)", padding: "6px 12px", borderRadius: "20px", fontSize: "12px", color: "var(--primary)", fontWeight: "bold", marginBottom: "12px" }}>
@@ -1048,7 +1055,7 @@ export default function DashboardClient() {
               <h2>Consola de Superadministrador</h2>
               <p>Gestión global de negocios, auditorías técnicas, seguridad y métricas financieras.</p>
             </div>
-            
+
             <button className="secondary-btn" onClick={() => handleDemoLogin("client")} style={{ border: "1px solid var(--primary)", color: "var(--primary)" }}>
               <span>Ir a Vista Cliente</span>
             </button>
@@ -1081,7 +1088,7 @@ export default function DashboardClient() {
           {/* Superadmin: Business administration and status */}
           <section className="section-card">
             <h3 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "20px" }}>Gestión de Negocios y Estado</h3>
-            
+
             <div className="table-scroll-wrapper">
               <table className="data-table">
                 <thead>
@@ -1110,12 +1117,12 @@ export default function DashboardClient() {
                       </td>
                       <td style={{ textAlign: "right" }}>
                         <div style={{ display: "inline-flex", gap: "8px" }}>
-                          
-                          <button 
-                            className="secondary-btn" 
+
+                          <button
+                            className="secondary-btn"
                             onClick={() => handleToggleSuspendBusiness(b.id)}
-                            style={{ 
-                              padding: "6px 12px", fontSize: "11px", 
+                            style={{
+                              padding: "6px 12px", fontSize: "11px",
                               color: b.isSuspended ? "var(--success)" : "var(--warning)",
                               borderColor: b.isSuspended ? "rgba(16,185,129,0.3)" : "rgba(245,158,11,0.3)"
                             }}
@@ -1124,8 +1131,8 @@ export default function DashboardClient() {
                             {b.isSuspended ? "Reactivar" : "Suspender"}
                           </button>
 
-                          <button 
-                            className="danger-btn" 
+                          <button
+                            className="danger-btn"
                             onClick={() => handleDeleteBusinessSuper(b.id)}
                             style={{ padding: "6px 12px", fontSize: "11px" }}
                           >
@@ -1144,12 +1151,12 @@ export default function DashboardClient() {
 
           {/* Bottom Grid: Create Superadmin & System Logs */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "24px" }}>
-            
+
             <section className="section-card">
               <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
                 <FileCode2 size={20} style={{ color: "var(--primary)" }} /> Registro Técnico del Servidor (Logs)
               </h3>
-              
+
               <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "250px", overflowY: "auto", paddingRight: "4px", fontFamily: "Courier New, monospace" }}>
                 {activityLogs.map(log => (
                   <div key={log.id} style={{ background: "rgba(255,255,255,0.02)", padding: "8px 12px", borderRadius: "6px", border: "1px solid var(--border)", fontSize: "12px" }}>
