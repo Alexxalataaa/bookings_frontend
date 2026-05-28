@@ -93,25 +93,38 @@ export default function LoginPage() {
     return null;
   }
 
-  const handleDemoLogin = (selectedRole: "client" | "business" | "superadmin") => {
+  const handleDemoLogin = async (selectedRole: "client" | "business" | "superadmin") => {
     setIsLoading(true);
-    setTimeout(() => {
-      let userToken = "demo_client_token";
-      let name = "Cliente de Prueba";
-      
-      if (selectedRole === "business") {
-        userToken = "demo_business_token";
-        name = "Salón Alicante Futura";
-      } else if (selectedRole === "superadmin") {
-        userToken = "demo_superadmin_token";
-        name = "Administrador Global";
-      }
+    setError(null);
+    let demoUser = "client1";
+    let demoPass = "client123!";
+    
+    if (selectedRole === "business") {
+      demoUser = "owner1";
+      demoPass = "owner123!";
+    } else if (selectedRole === "superadmin") {
+      demoUser = "admin";
+      demoPass = "admin";
+    }
 
-      localStorage.setItem("auth_token", userToken);
-      localStorage.setItem("user_role", selectedRole);
-      localStorage.setItem("user_name", name);
+    try {
+      const res = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: demoUser, password: demoPass }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Error en login de demo");
+      }
+      localStorage.setItem("auth_token", data.token);
+      localStorage.setItem("user_role", data.user.role);
+      localStorage.setItem("user_name", data.user.fullName);
       router.replace("/dashboard");
-    }, 800);
+    } catch (err: any) {
+      setError("Error al conectar con la API de BookFlow: " + err.message);
+      setIsLoading(false);
+    }
   };
 
   async function onSubmit(e: React.FormEvent) {
@@ -120,120 +133,206 @@ export default function LoginPage() {
     setError(null);
     setSuccessMessage(null);
 
-    // Simulated local registration and login flow for ultra-responsive user experience
-    setTimeout(() => {
-      if (isRegistering) {
-        if (role === "client") {
-          if (!fullName.trim() || !email.trim() || !username.trim() || !password.trim()) {
-            setError("Por favor, completa todos los campos obligatorios");
-            setIsLoading(false);
-            return;
-          }
-        } else {
-          // Business validations
-          if (!businessName.trim() || !email.trim() || !city.trim() || !password.trim()) {
-            setError("Por favor, completa todos los campos del negocio");
-            setIsLoading(false);
-            return;
-          }
-        }
+    if (isRegistering) {
+      const isClientRole = role === "client";
+      const nameToUse = isClientRole ? fullName : businessName;
+      const usernameToUse = isClientRole ? username : email.split("@")[0] + "_" + Date.now().toString().slice(-4);
 
-        const passError = validatePassword(password);
-        if (passError) {
-          setError(passError);
-          setIsLoading(false);
-          return;
-        }
-
-        if (password !== confirmPassword) {
-          setError("Las contraseñas no coinciden");
-          setIsLoading(false);
-          return;
-        }
-
-        // Show mock 2FA code
-        setTempToken("verify_temp_token_" + Math.random());
-        setShow2fa(true);
-        setSuccessMessage("Código de verificación 2FA enviado al correo (Simulado: 123456)");
-        setIsLoading(false);
-      } else {
-        // Login Flow
-        if (!email.trim() || !password.trim()) {
-          setError("El correo y contraseña son obligatorios");
-          setIsLoading(false);
-          return;
-        }
-
-        // Check if admin/admin
-        if (email.trim().toLowerCase() === "admin" && password === "admin") {
-          localStorage.setItem("auth_token", "superadmin_token_jwt");
-          localStorage.setItem("user_role", "superadmin");
-          localStorage.setItem("user_name", "Superadministrador Principal");
-          router.replace("/dashboard");
-          return;
-        }
-
-        // Save login state
-        localStorage.setItem("auth_token", "user_token_" + role + "_" + Date.now());
-        localStorage.setItem("user_role", role);
-        localStorage.setItem("user_name", role === "client" ? "Usuario Premium" : "Alicante Futura Business");
-        router.replace("/dashboard");
-      }
-    }, 1000);
-  }
-
-  // Handle Onboarding Completion
-  const handleOnboardingSubmit = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      localStorage.setItem("auth_token", "business_onboarding_token_" + Date.now());
-      localStorage.setItem("user_role", "business");
-      localStorage.setItem("user_name", businessName || "Negocio Onboarded");
-      
-      // Save business profile configuration in local storage
-      const businessData = {
-        name: businessName,
-        phone,
-        email,
-        street,
-        city,
-        zipCode,
-        category,
-        hours: openingHours,
-        services: services
-      };
-      localStorage.setItem("my_business_profile", JSON.stringify(businessData));
-      
-      setIsLoading(false);
-      setIsOnboarding(false);
-      router.replace("/dashboard");
-    }, 1200);
-  };
-
-  const handle2faVerify = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      if (twoFactorCode !== "123456") {
-        setError("Código incorrecto. Prueba con '123456'");
+      if (!nameToUse.trim() || !email.trim() || !password.trim()) {
+        setError("Por favor, completa todos los campos requeridos");
         setIsLoading(false);
         return;
       }
 
+      const passError = validatePassword(password);
+      if (passError) {
+        setError(passError);
+        setIsLoading(false);
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setError("Las contraseñas no coinciden");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_URL}/auth/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fullName: nameToUse.trim(),
+            email: email.trim(),
+            username: usernameToUse.trim(),
+            password: password,
+            role: role,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || "Error al registrarse");
+        }
+
+        if (data.require2fa) {
+          setTempToken(data.tempToken);
+          setShow2fa(true);
+          setSuccessMessage("Código de verificación 2FA enviado al correo (Simulado: Mira la terminal de NestJS)");
+        } else {
+          setSuccessMessage("Registro completado. Por favor, inicia sesión.");
+          setIsRegistering(false);
+        }
+      } catch (err: any) {
+        setError(err.message || "Error en el registro");
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      if (!email.trim() || !password.trim()) {
+        setError("El correo/usuario y contraseña son obligatorios");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_URL}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: email.trim(),
+            password: password,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || "Credenciales incorrectas");
+        }
+
+        localStorage.setItem("auth_token", data.token);
+        localStorage.setItem("user_role", data.user.role);
+        localStorage.setItem("user_name", data.user.fullName);
+        router.replace("/dashboard");
+      } catch (err: any) {
+        setError(err.message || "Error al iniciar sesión");
+        setIsLoading(false);
+      }
+    }
+  }
+
+  const handleOnboardingSubmit = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (!token) throw new Error("Falta token de sesión");
+
+      const bizRes = await fetch(`${API_URL}/businesses`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: businessName,
+          category,
+          street,
+          city,
+          zipCode,
+          phone,
+          email,
+          image: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1000&auto=format&fit=crop&q=80",
+          logo: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=200&auto=format&fit=crop&q=80",
+          hours: JSON.stringify(openingHours),
+          gallery: JSON.stringify([]),
+        }),
+      });
+
+      const business = await bizRes.json();
+      if (!bizRes.ok) {
+        throw new Error(business.message || "Error al crear el negocio");
+      }
+
+      for (const s of services) {
+        const sRes = await fetch(`${API_URL}/services`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: s.name,
+            duration: s.duration,
+            price: s.price,
+            businessId: business.id,
+          }),
+        });
+        if (!sRes.ok) {
+          console.error("Error creating onboarding service", s.name);
+        }
+      }
+
+      setIsOnboarding(false);
+      router.replace("/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Error en configuración inicial");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handle2faVerify = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (!tempToken) throw new Error("Falta token temporal");
+      
+      const res = await fetch(`${API_URL}/auth/verify-register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tempToken: tempToken,
+          code: twoFactorCode,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Código incorrecto");
+      }
+
+      const loginRes = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: email.trim(),
+          password: password,
+        }),
+      });
+
+      const loginData = await loginRes.json();
+      if (!loginRes.ok) {
+        throw new Error(loginData.message || "Error al iniciar sesión tras confirmación");
+      }
+
+      localStorage.setItem("auth_token", loginData.token);
+      localStorage.setItem("user_role", loginData.user.role);
+      localStorage.setItem("user_name", loginData.user.fullName);
+
       setShow2fa(false);
       setSuccessMessage(null);
 
-      if (role === "business") {
-        // Redirect to onboarding
+      if (loginData.user.role === "business") {
         setIsOnboarding(true);
-        setIsLoading(false);
       } else {
-        localStorage.setItem("auth_token", "client_registered_token_" + Date.now());
-        localStorage.setItem("user_role", "client");
-        localStorage.setItem("user_name", fullName || username || "Cliente Premium");
-        setIsLoading(false);
         router.replace("/dashboard");
       }
-    }, 1000);
+    } catch (err: any) {
+      setError(err.message || "Error al verificar código");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

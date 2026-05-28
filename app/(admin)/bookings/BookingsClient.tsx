@@ -7,6 +7,7 @@ import type {
   CreateBookingDto,
   UpdateBookingDto,
   Customer,
+  Business,
 } from "@/lib/api";
 import {
   createAppointment,
@@ -14,6 +15,7 @@ import {
   updateAppointment,
   getAppointments,
   getCustomers,
+  getMyBusinesses,
 } from "@/lib/api";
 import { useEffect } from "react";
 import { 

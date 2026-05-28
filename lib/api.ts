@@ -1,4 +1,43 @@
-export type BookingStatus = "pending" | "confirmed" | "paid";
+export type BookingStatus = "pending" | "confirmed" | "paid" | "cancelled";
+
+export interface UserProfile {
+  id: number;
+  username: string;
+  fullName: string;
+  email: string;
+  role: string;
+}
+
+export interface Business {
+  id: number;
+  name: string;
+  slug: string;
+  category: string;
+  description?: string;
+  street?: string;
+  city?: string;
+  zipCode?: string;
+  phone?: string;
+  email?: string;
+  image?: string;
+  logo?: string;
+  hours?: string; // JSON string
+  socialLinks?: string; // JSON string
+  gallery?: string; // JSON string
+  rating: number;
+  reviewsCount: number;
+  isSuspended: boolean;
+  createdAt: string;
+  services?: Service[];
+}
+
+export interface Service {
+  id: number;
+  name: string;
+  description?: string;
+  price: number;
+  duration: number; // in minutes
+}
 
 export interface Booking {
   id: number;
@@ -8,15 +47,19 @@ export interface Booking {
   customerId: number;
   businessId: number;
   serviceName: string;
+  user?: UserProfile;
+  business?: Business;
+  service?: Service;
 }
 
 export interface CreateBookingDto {
   date: string;
   time: string;
   status: BookingStatus;
-  customerId: number;
+  customerId?: number;
   businessId: number;
   serviceName: string;
+  serviceId?: number;
 }
 
 export interface UpdateBookingDto {
@@ -53,6 +96,7 @@ export interface Payment {
   date: string;
   status: "pending" | "paid";
   createdAt: string;
+  business?: Business;
 }
 
 export interface CreatePaymentDto {
@@ -62,19 +106,19 @@ export interface CreatePaymentDto {
   method: string;
   date: string;
   status?: "pending" | "paid";
+  businessId?: number;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
-// Appointments
+// Standard Auth Fetch Wrapper
 async function authedFetch<T>(input: string, init: RequestInit = {}): Promise<T> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
   const headers = new Headers(init.headers);
 
-  // Importante: cuando se renderiza en el servidor (Server Components),
-  // no hay localStorage y no podemos mandar el token.
-  // En ese caso dejamos la petición sin auth y el cliente la volverá a pedir.
-  if (token) headers.set('Authorization', `Bearer ${token}`);
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
 
   const res = await fetch(input, {
     ...init,
@@ -82,8 +126,11 @@ async function authedFetch<T>(input: string, init: RequestInit = {}): Promise<T>
   });
 
   if (res.status === 401) {
+    // If unauthorized, clear local session state and redirect to login
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('user_role');
+      localStorage.removeItem('user_name');
       window.location.href = '/login';
     }
     throw new Error('Unauthorized (401)');
@@ -93,12 +140,80 @@ async function authedFetch<T>(input: string, init: RequestInit = {}): Promise<T>
     const text = await res.text().catch(() => '');
     throw new Error(text || 'Request failed');
   }
+
   return (await res.json()) as T;
 }
 
+// --- BUSINESSES ---
+export async function getBusinesses(): Promise<Business[]> {
+  return fetch(`${API_URL}/businesses`, { cache: "no-store" }).then(res => res.json());
+}
 
-export async function getAppointments(): Promise<Booking[]> {
-  return authedFetch<Booking[]>(`${API_URL}/appointments`, { cache: "no-store" });
+export async function getBusinessesAll(): Promise<Business[]> {
+  return authedFetch<Business[]>(`${API_URL}/businesses/all`, { cache: "no-store" });
+}
+
+export async function getMyBusinesses(): Promise<Business[]> {
+  return authedFetch<Business[]>(`${API_URL}/businesses/my`, { cache: "no-store" });
+}
+
+export async function getBusiness(idOrSlug: string | number): Promise<Business> {
+  const res = await fetch(`${API_URL}/businesses/${idOrSlug}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Negocio no encontrado");
+  return res.json();
+}
+
+export async function createBusiness(data: Partial<Business>): Promise<Business> {
+  return authedFetch<Business>(`${API_URL}/businesses`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateBusiness(id: number, data: Partial<Business>): Promise<Business> {
+  return authedFetch<Business>(`${API_URL}/businesses/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteBusiness(id: number): Promise<void> {
+  await authedFetch<void>(`${API_URL}/businesses/${id}`, { method: "DELETE" });
+}
+
+// --- SERVICES ---
+export async function getServices(businessId: number): Promise<Service[]> {
+  const res = await fetch(`${API_URL}/services?businessId=${businessId}`, { cache: "no-store" });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function createService(data: Partial<Service> & { businessId: number }): Promise<Service> {
+  return authedFetch<Service>(`${API_URL}/services`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateService(id: number, data: Partial<Service>): Promise<Service> {
+  return authedFetch<Service>(`${API_URL}/services/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteService(id: number): Promise<void> {
+  await authedFetch<void>(`${API_URL}/services/${id}`, { method: "DELETE" });
+}
+
+// --- APPOINTMENTS (RESERVATIONS) ---
+export async function getAppointments(businessId?: number): Promise<Booking[]> {
+  const url = businessId ? `${API_URL}/appointments?businessId=${businessId}` : `${API_URL}/appointments`;
+  return authedFetch<Booking[]>(url, { cache: "no-store" });
 }
 
 export async function createAppointment(data: CreateBookingDto): Promise<Booking> {
@@ -121,7 +236,7 @@ export async function deleteAppointment(id: number): Promise<{ message: string }
   return authedFetch<{ message: string }>(`${API_URL}/appointments/${id}`, { method: "DELETE" });
 }
 
-// Customers
+// --- CUSTOMERS ---
 export async function getCustomers(): Promise<Customer[]> {
   return authedFetch<Customer[]>(`${API_URL}/customers`, { cache: "no-store" });
 }
@@ -146,9 +261,17 @@ export async function deleteCustomer(id: number): Promise<void> {
   await authedFetch<void>(`${API_URL}/customers/${id}`, { method: "DELETE" });
 }
 
-// Payments
-export async function getPayments(): Promise<Payment[]> {
-  return authedFetch<Payment[]>(`${API_URL}/payments`, { cache: "no-store" });
+// --- PAYMENTS ---
+export async function getPayments(range?: string, businessId?: number): Promise<Payment[]> {
+  let url = `${API_URL}/payments`;
+  const params = new URLSearchParams();
+  if (range) params.set('range', range);
+  if (businessId) params.set('businessId', businessId.toString());
+  
+  const queryStr = params.toString();
+  if (queryStr) url += `?${queryStr}`;
+
+  return authedFetch<Payment[]>(url, { cache: "no-store" });
 }
 
 export async function createPayment(data: CreatePaymentDto): Promise<Payment> {
@@ -171,12 +294,7 @@ export async function deletePayment(id: number): Promise<void> {
   await authedFetch<void>(`${API_URL}/payments/${id}`, { method: "DELETE" });
 }
 
-// Profile / Auth
-export interface UserProfile {
-  id: number;
-  username: string;
-}
-
+// --- PROFILE / AUTH ---
 export async function getProfile(): Promise<UserProfile> {
   return authedFetch<UserProfile>(`${API_URL}/auth/profile`, { cache: "no-store" });
 }
