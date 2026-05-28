@@ -114,6 +114,19 @@ export default function DashboardClient() {
   const [editBizHours, setEditBizHours] = useState({ monFri: "", sat: "", sun: "" });
   const [settingsSuccess, setSettingsSuccess] = useState(false);
 
+  const handleDemoLogin = (role: "client" | "business" | "superadmin") => {
+    localStorage.setItem("user_role", role);
+    let name = "Usuario de BookFlow";
+    if (role === "client") name = "Cliente Premium";
+    else if (role === "business") name = "Propietario de Negocios";
+    else if (role === "superadmin") name = "Administrador Principal";
+    
+    localStorage.setItem("user_name", name);
+    setUserRole(role);
+    setUserName(name);
+    loadDashboardData(role);
+  };
+
   useEffect(() => {
     // Check local auth details
     const role = localStorage.getItem("user_role") || "business";
@@ -444,7 +457,7 @@ export default function DashboardClient() {
   // Filtered Client Businesses
   const filteredBusinesses = allBusinesses.filter(b => {
     const matchesSearch = b.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          b.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (b.city?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
                           b.category.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === "Todos" || b.category === selectedCategory;
     const matchesCity = selectedCity === "Todos" || b.city === selectedCity;
@@ -960,7 +973,7 @@ export default function DashboardClient() {
                           {businessBookings.length > 0 ? (
                             businessBookings.map(b => (
                               <tr key={b.id}>
-                                <td style={{ fontWeight: "bold" }}>{b.user?.fullName || b.customerName || `Cliente #${b.customerId}`}</td>
+                                <td style={{ fontWeight: "bold" }}>{b.user?.fullName || `Cliente #${b.customerId}`}</td>
                                 <td>{b.serviceName}</td>
                                 <td>
                                   <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>

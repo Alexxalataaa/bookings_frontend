@@ -98,8 +98,18 @@ function ProfileContent() {
       return;
     }
 
-    if (password.length < 4) {
-      setPasswordError("La contraseña debe tener al menos 4 caracteres");
+    if (password.length < 8) {
+      setPasswordError("La contraseña debe tener al menos 8 caracteres");
+      return;
+    }
+
+    if (!/[0-9]/.test(password)) {
+      setPasswordError("La contraseña debe contener al menos un número");
+      return;
+    }
+
+    if (!/[^A-Za-z0-9\s]/.test(password)) {
+      setPasswordError("La contraseña debe contener al menos un carácter especial");
       return;
     }
 
@@ -303,7 +313,7 @@ function ProfileContent() {
                     fontSize: "14px",
                     fontWeight: 500,
                   }}
-                  placeholder="Mínimo 4 caracteres"
+                  placeholder="Mínimo 8 caracteres, número y símbolo"
                 />
               </div>
 

@@ -197,11 +197,32 @@ export default function NotificationBell() {
           >
             <div style={{ padding: "16px", borderBottom: "1px solid #e5e7eb", fontWeight: "bold", color: "#374151", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span>Notificaciones</span>
-              {notifications.length > 0 && (
-                <span style={{ fontSize: "12px", fontWeight: "normal", color: "#6b7280", background: "#f3f4f6", padding: "2px 8px", borderRadius: "12px" }}>
-                  {notifications.length}
-                </span>
-              )}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                {notifications.length > 0 && (
+                  <span style={{ fontSize: "12px", fontWeight: "normal", color: "#6b7280", background: "#f3f4f6", padding: "2px 8px", borderRadius: "12px" }}>
+                    {notifications.length}
+                  </span>
+                )}
+                <button 
+                  onClick={() => setIsOpen(false)}
+                  style={{ 
+                    background: "none", 
+                    border: "none", 
+                    cursor: "pointer", 
+                    color: "#9ca3af", 
+                    display: "flex", 
+                    alignItems: "center", 
+                    justifyContent: "center",
+                    padding: "4px",
+                    borderRadius: "4px",
+                    transition: "background 0.2s"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "#f3f4f6"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+                >
+                  <X size={16} />
+                </button>
+              </div>
             </div>
             <div style={{ padding: "0", maxHeight: "350px", overflowY: "auto" }}>
               {notifications.length === 0 ? (

@@ -29,6 +29,7 @@ export interface Business {
   isSuspended: boolean;
   createdAt: string;
   services?: Service[];
+  owner?: UserProfile;
 }
 
 export interface Service {

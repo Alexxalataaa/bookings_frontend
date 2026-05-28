@@ -17,8 +17,6 @@ import {
   Clock, 
   Star, 
   Globe, 
-  Instagram, 
-  Facebook, 
   Calendar as CalendarIcon, 
   ChevronRight, 
   ArrowLeft, 
@@ -528,12 +526,12 @@ export default function BusinessLandingPage({ params }: PageProps) {
               <div style={{ display: "flex", gap: "12px", marginTop: "20px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "16px" }}>
                 {socialLinks.instagram && (
                   <a href={socialLinks.instagram} target="_blank" rel="noreferrer" style={{ width: "36px", height: "36px", borderRadius: "50%", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", textDecoration: "none", transition: "all 0.3s" }} className="social-icon">
-                    <Instagram size={16} />
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-instagram"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
                   </a>
                 )}
                 {socialLinks.facebook && (
                   <a href={socialLinks.facebook} target="_blank" rel="noreferrer" style={{ width: "36px", height: "36px", borderRadius: "50%", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", textDecoration: "none", transition: "all 0.3s" }} className="social-icon">
-                    <Facebook size={16} />
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-facebook"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
                   </a>
                 )}
               </div>
