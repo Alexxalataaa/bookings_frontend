@@ -20,9 +20,9 @@ const businessMenuItems = [
 ];
 
 const superadminMenuItems = [
-  { label: "Tablero Global", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Logs de Actividad", href: "/bookings", icon: FileCode2 },
-  { label: "Administradores", href: "/profile", icon: Settings },
+  { label: "Métricas Globales", href: "/superadmin/metrics", icon: LayoutDashboard },
+  { label: "Gestión Negocios", href: "/superadmin/businesses", icon: FileCode2 },
+  { label: "Cuentas", href: "/superadmin/accounts", icon: Settings },
 ];
 
 const themes = [

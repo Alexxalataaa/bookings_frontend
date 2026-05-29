@@ -300,10 +300,63 @@ export async function getProfile(): Promise<UserProfile> {
   return authedFetch<UserProfile>(`${API_URL}/auth/profile`, { cache: "no-store" });
 }
 
-export async function updateProfile(data: { username?: string; password?: string }): Promise<UserProfile> {
+export async function updateProfile(data: { username?: string; password?: string; email?: string }): Promise<UserProfile> {
   return authedFetch<UserProfile>(`${API_URL}/auth/profile`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
+}
+
+// --- USERS (SUPERADMIN) ---
+export interface SystemUser {
+  id: number;
+  fullName: string;
+  email: string;
+  username: string;
+  role: string;
+  isConfirmed: boolean;
+}
+
+export async function getUsers(): Promise<SystemUser[]> {
+  return authedFetch<SystemUser[]>(`${API_URL}/users`, { cache: "no-store" });
+}
+
+export async function createUser(data: any): Promise<SystemUser> {
+  return authedFetch<SystemUser>(`${API_URL}/users`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateUser(id: number, data: any): Promise<SystemUser> {
+  return authedFetch<SystemUser>(`${API_URL}/users/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteUser(id: number): Promise<void> {
+  await authedFetch<void>(`${API_URL}/users/${id}`, { method: "DELETE" });
+}
+
+// --- LOGS & METRICS (SUPERADMIN) ---
+export interface SystemLog {
+  id: number;
+  action: string;
+  entityName?: string;
+  entityId?: string;
+  userId?: number;
+  details?: string;
+  createdAt: string;
+}
+
+export async function getSystemLogs(limit: number = 50): Promise<SystemLog[]> {
+  return authedFetch<SystemLog[]>(`${API_URL}/logs?limit=${limit}`, { cache: "no-store" });
+}
+
+export async function getSystemMetrics(): Promise<any> {
+  return authedFetch<any>(`${API_URL}/logs/metrics`, { cache: "no-store" });
 }
