@@ -626,6 +626,14 @@ body {
   outline: none;
 }
 
+/* Global placeholders styling for clear accessibility contrast in dark and light modes */
+input::placeholder,
+textarea::placeholder,
+select::placeholder {
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
 /* Modals */
 .modal-backdrop {
   position: fixed;
@@ -639,13 +647,14 @@ body {
 }
 
 .modal-card {
-  background: #13151a;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   padding: 48px;
   width: 100%;
   max-width: 550px;
-  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(20px);
   animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -862,12 +871,17 @@ body {
   display: none;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border);
-  color: white;
+  color: var(--text);
   padding: 10px;
   border-radius: 12px;
   cursor: pointer;
   margin-right: 16px;
   transition: all 0.2s;
+}
+
+html[data-brightness="light"] .mobile-toggle {
+  background: rgba(0, 0, 0, 0.03);
+  color: var(--text);
 }
 
 .mobile-toggle:hover {
