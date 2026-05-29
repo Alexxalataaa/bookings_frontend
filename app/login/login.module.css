@@ -105,7 +105,8 @@
 }
 
 .input::placeholder {
-  color: var(--text-muted);
+  color: #cbd5e1; /* Increased contrast for WCAG AA compliance */
+  opacity: 0.8;
 }
 
 .input:hover:not(:disabled) {
@@ -258,7 +259,7 @@
   margin-top: 24px;
   text-align: center;
   font-size: 12px;
-  color: var(--text-muted);
+  color: #e2e8f0; /* Lighter text for WCAG AA compliance */
 }
 
 .footer p {
@@ -314,11 +315,11 @@
   margin-top: 20px;
   text-align: center;
   font-size: 14px;
-  color: var(--text-muted);
+  color: #e2e8f0; /* Lighter text for WCAG AA contrast */
 }
 
 .toggleLink {
-  color: var(--primary);
+  color: #a5b4fc; /* Lighter indigo for higher contrast on dark gray card */
   background: none;
   border: none;
   padding: 0;
@@ -326,14 +327,13 @@
   font-size: inherit;
   font-weight: 600;
   cursor: pointer;
-  text-decoration: none;
+  text-decoration: underline; /* Underline by default to clearly indicate interactive link */
   transition: color 0.2s ease;
   margin-left: 5px;
 }
 
 .toggleLink:hover {
-  color: #818cf8;
-  text-decoration: underline;
+  color: #c7d2fe;
 }
 
 .passwordRules {

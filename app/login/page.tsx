@@ -700,7 +700,7 @@ export default function LoginPage() {
               }
               setIsRegistering(false);
             }}
-            style={{ background: "none", border: "none", color: "var(--primary)", fontSize: "11px", fontWeight: "bold", textDecoration: "underline", cursor: "pointer" }}
+            style={{ background: "none", border: "none", color: "#a5b4fc", fontSize: "11px", fontWeight: "bold", textDecoration: "underline", cursor: "pointer" }}
           >
             {role === "superadmin" ? "Volver a la vista del cliente" : "Acceso de Superadmin de Plataforma"}
           </button>
