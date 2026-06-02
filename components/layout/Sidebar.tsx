@@ -38,10 +38,23 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean, onClose:
   const [activeTheme, setActiveTheme] = useState("default");
   const [activeBrightness, setActiveBrightness] = useState("dark");
   const [userRole, setUserRole] = useState<"client" | "business" | "superadmin">("business");
+  const [customColor, setCustomColor] = useState("#a855f7");
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("app-theme") || "default";
-    setActiveTheme(savedTheme);
+    const savedCustomColor = localStorage.getItem("app-theme-custom");
+    if (savedTheme === "custom" && savedCustomColor) {
+      setActiveTheme("custom");
+      setCustomColor(savedCustomColor);
+      document.documentElement.style.setProperty("--primary", savedCustomColor);
+      document.documentElement.style.setProperty("--primary-gradient", `linear-gradient(135deg, ${savedCustomColor} 0%, #a855f7 100%)`);
+    } else {
+      setActiveTheme(savedTheme);
+      if (savedTheme !== "default") {
+        document.documentElement.setAttribute("data-theme", savedTheme);
+      }
+    }
+    
     const savedBrightness = localStorage.getItem("app-brightness") || "dark";
     setActiveBrightness(savedBrightness);
 
@@ -53,13 +66,26 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean, onClose:
 
   const changeTheme = (themeId: string) => {
     setActiveTheme(themeId);
+    document.documentElement.style.removeProperty("--primary");
+    document.documentElement.style.removeProperty("--primary-gradient");
     if (themeId === "default") {
       document.documentElement.removeAttribute("data-theme");
-      localStorage.removeItem("app-theme");
+      localStorage.setItem("app-theme", "default");
     } else {
       document.documentElement.setAttribute("data-theme", themeId);
       localStorage.setItem("app-theme", themeId);
     }
+  };
+
+  const handleCustomColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newColor = e.target.value;
+    setActiveTheme("custom");
+    setCustomColor(newColor);
+    document.documentElement.removeAttribute("data-theme");
+    document.documentElement.style.setProperty("--primary", newColor);
+    document.documentElement.style.setProperty("--primary-gradient", `linear-gradient(135deg, ${newColor} 0%, #a855f7 100%)`);
+    localStorage.setItem("app-theme", "custom");
+    localStorage.setItem("app-theme-custom", newColor);
   };
 
   const menuItems = 
@@ -70,7 +96,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean, onClose:
         : businessMenuItems;
 
   return (
-    <aside className={`admin-sidebar ${isOpen ? "admin-sidebar--open" : ""}`}>
+    <aside className={`admin-sidebar ${isOpen ? "admin-sidebar--open" : ""}`} style={{ overflowY: "auto", overflowX: "hidden" }}>
       <div className="admin-sidebar__brand">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
           <div>
@@ -175,7 +201,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean, onClose:
         {/* Theme Control */}
         <div>
           <p style={{ fontSize: "12px", textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600, letterSpacing: "0.05em", margin: "0 0 10px 0" }}>Color</p>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "nowrap", overflowX: "auto", paddingBottom: "8px" }} className="hide-scrollbar">
             {themes.map(t => (
               <button 
                 key={t.id}
@@ -185,11 +211,32 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean, onClose:
                   background: t.color, 
                   border: activeTheme === t.id ? "2px solid var(--text)" : "2px solid transparent",
                   cursor: "pointer", padding: 0,
-                  boxShadow: activeTheme === t.id ? "0 0 0 1px var(--text-muted)" : "none"
+                  boxShadow: activeTheme === t.id ? "0 0 0 1px var(--text-muted)" : "none",
+                  flexShrink: 0
                 }}
                 title={t.label}
               />
             ))}
+            
+            {/* Custom Color Picker */}
+            <div 
+              style={{ 
+                position: "relative", width: "24px", height: "24px", borderRadius: "50%", 
+                overflow: "hidden", flexShrink: 0, 
+                border: activeTheme === "custom" ? "2px solid var(--text)" : "2px solid transparent",
+                boxShadow: activeTheme === "custom" ? "0 0 0 1px var(--text-muted)" : "none",
+                background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)",
+                cursor: "pointer", padding: 0
+              }}
+              title="Personalizado"
+            >
+              <input 
+                type="color"
+                value={customColor}
+                onChange={handleCustomColorChange}
+                style={{ opacity: 0, position: "absolute", top: 0, left: 0, width: "100%", height: "100%", cursor: "pointer" }}
+              />
+            </div>
           </div>
         </div>
       </div>
