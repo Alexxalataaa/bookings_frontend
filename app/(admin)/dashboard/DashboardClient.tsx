@@ -454,12 +454,20 @@ export default function DashboardClient() {
     );
   }
 
-  // Filtered Client Businesses
+  const MAPA_CATEGORIAS: any = {
+    "Estética": { stringBD: "Belleza" },
+    "Bienestar": { stringBD: "Nutrición" },
+    "Salud": { stringBD: "Psicología" },
+    "Deporte": { stringBD: "Deporte" }
+  };
+
   const filteredBusinesses = allBusinesses.filter(b => {
     const matchesSearch = b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (b.city?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
       b.category.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "Todos" || b.category === selectedCategory;
+      
+    const terminoBusquedaBD = MAPA_CATEGORIAS[selectedCategory]?.stringBD || selectedCategory;
+    const matchesCategory = selectedCategory === "Todos" || b.category === terminoBusquedaBD;
     const matchesCity = selectedCity === "Todos" || b.city === selectedCity;
     return matchesSearch && matchesCategory && matchesCity;
   });
@@ -601,8 +609,8 @@ export default function DashboardClient() {
                       const biz = ownedBusinesses.find(b => b.id === Number(e.target.value));
                       if (biz) selectBusiness(biz);
                     }}
-                    className="select"
-                    style={{ fontSize: "18px", fontWeight: "bold", background: "none", border: "none", color: "white", padding: 0, cursor: "pointer", width: "auto", minWidth: "200px" }}
+                    className="select text-slate-900 dark:text-white"
+                    style={{ fontSize: "18px", fontWeight: "bold", background: "none", border: "none", padding: 0, cursor: "pointer", width: "auto", minWidth: "200px" }}
                   >
                     {ownedBusinesses.map(b => (
                       <option key={b.id} value={b.id} style={{ color: "#000000" }}>{b.name}</option>
@@ -813,7 +821,7 @@ export default function DashboardClient() {
                     </div>
                     <div className="kpi-card">
                       <p className="kpi-card__label">Facturación Total</p>
-                      <h3 className="kpi-card__value">{getRevenue().toFixed(2)} €</h3>
+                      <h3 className="kpi-card__value">{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(getRevenue())}</h3>
                       <p className="kpi-card__meta kpi-card__meta--positive">
                         <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
                           <DollarSign size={14} /> Cobrado
@@ -989,7 +997,12 @@ export default function DashboardClient() {
                                 </td>
                                 <td style={{ fontWeight: "bold" }}>{b.service?.price || 15} €</td>
                                 <td>
-                                  <span className={`badge badge--${b.status}`}>{b.status}</span>
+                                  <span className={`badge badge--${b.status}`}>
+                                    {b.status === "pending" ? "Pendiente" : 
+                                     b.status === "confirmed" ? "Confirmada" : 
+                                     b.status === "paid" ? "Pagada" : 
+                                     b.status === "cancelled" ? "Cancelada" : b.status}
+                                  </span>
                                 </td>
                                 <td style={{ textAlign: "right" }}>
                                   {b.status === "pending" && (

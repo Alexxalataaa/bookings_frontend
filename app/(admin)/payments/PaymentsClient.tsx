@@ -92,6 +92,8 @@ const MethodIcon = ({ method }: { method: string }) => {
   }
 };
 
+const formatCurrency = (val: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(val);
+
 export default function PaymentsClient() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -253,21 +255,21 @@ export default function PaymentsClient() {
       <section className="kpi-grid">
         <KpiCard
           title="Cobrado hoy"
-          value={`${kpis.totalToday} €`}
+          value={formatCurrency(kpis.totalToday)}
           subtitle={`${kpis.todayCount} operaciones realizadas`}
           variant="positive"
           icon={TrendingUp}
         />
         <KpiCard
           title="Pendiente"
-          value={`${kpis.totalPending} €`}
+          value={formatCurrency(kpis.totalPending)}
           subtitle={`${kpis.pendingCount} cobros por procesar`}
           variant="warning"
           icon={AlertCircle}
         />
         <KpiCard 
           title="Histórico" 
-          value={`${payments.reduce((acc, p) => acc + (p.status === "paid" ? Number(p.amount) : 0), 0)} €`} 
+          value={formatCurrency(payments.reduce((acc, p) => acc + (p.status === "paid" ? Number(p.amount) : 0), 0))} 
           subtitle="Total acumulado" 
           icon={History}
         />
@@ -413,7 +415,7 @@ export default function PaymentsClient() {
                       <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{payment.businessName}</span>
                     </div>
                   </td>
-                  <td style={{ fontWeight: 700, fontSize: "16px" }}>{payment.amount} €</td>
+                  <td style={{ fontWeight: 700, fontSize: "16px" }}>{formatCurrency(Number(payment.amount))}</td>
                   <td>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--text-muted)" }}>
                       <MethodIcon method={payment.method} />

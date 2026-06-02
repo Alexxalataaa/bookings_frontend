@@ -32,6 +32,7 @@ function ProfileContent() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState("");
   
   // Username Form
   const [username, setUsername] = useState("");
@@ -47,6 +48,7 @@ function ProfileContent() {
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   useEffect(() => {
+    setUserRole(localStorage.getItem("user_role") || "");
     fetchProfile();
   }, []);
 
@@ -148,6 +150,10 @@ function ProfileContent() {
 
   const initialLetter = profile?.username ? profile.username.charAt(0).toUpperCase() : "A";
 
+  let roleLabel = "Cuenta Administrador Principal";
+  if (userRole === "client") roleLabel = "Cuenta de Cliente Premium";
+  if (userRole === "business") roleLabel = "Cuenta Propietario de Negocio";
+
   return (
     <motion.div
       variants={containerVariants}
@@ -213,7 +219,7 @@ function ProfileContent() {
           <div style={{ flex: 1, minWidth: "200px" }}>
             <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 700 }}>{profile?.username}</h3>
             <p style={{ margin: "4px 0 0 0", color: "var(--text-muted)", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
-              <Shield size={14} style={{ color: "var(--primary)" }} /> Cuenta Administrador Principal
+              <Shield size={14} style={{ color: "var(--primary)" }} /> {roleLabel}
             </p>
           </div>
         </motion.div>

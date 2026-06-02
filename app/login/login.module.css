@@ -105,8 +105,8 @@
 }
 
 .input::placeholder {
-  color: #cbd5e1; /* Increased contrast for WCAG AA compliance */
-  opacity: 0.8;
+  color: #f8fafc; /* Máximo contraste para WCAG AAA */
+  opacity: 1;
 }
 
 .input:hover:not(:disabled) {
@@ -315,7 +315,7 @@
   margin-top: 20px;
   text-align: center;
   font-size: 14px;
-  color: #e2e8f0; /* Lighter text for WCAG AA contrast */
+  color: #f1f5f9; /* Texto de mayor contraste */
 }
 
 .toggleLink {

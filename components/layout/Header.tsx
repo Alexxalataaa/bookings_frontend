@@ -14,7 +14,7 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar: () => voi
     if (savedRole) {
       setUserRole(savedRole);
     }
-  }, []);
+  }, [pathname]);
 
   // Determinar título y subtítulo dinámicamente según el rol y la ruta (contexto)
   let title = "BookFlow Admin";
@@ -23,16 +23,18 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar: () => voi
   if (userRole === "superadmin") {
     title = "BookFlow Superadmin";
     subtitle = "Consola de administración global";
-    
-    if (pathname.includes("/dashboard")) {
-      title = "Tablero Global";
+    if (pathname.includes("/metrics")) {
+      title = "Métricas Globales";
       subtitle = "Métricas globales del sistema y rendimiento general";
-    } else if (pathname.includes("/bookings")) {
-      title = "Logs de Actividad";
+    } else if (pathname.includes("/accounts")) {
+      title = "Logs y Cuentas";
       subtitle = "Historial completo de auditoría y registros del sistema";
-    } else if (pathname.includes("/profile")) {
-      title = "Administradores";
-      subtitle = "Gestión de accesos y configuración de plataforma";
+    } else if (pathname.includes("/businesses")) {
+      title = "Negocios";
+      subtitle = "Gestión de plataformas registradas y negocios";
+    } else {
+      title = "BookFlow Superadmin";
+      subtitle = "Consola de administración global";
     }
   } else if (userRole === "client") {
     title = "BookFlow Cliente";
