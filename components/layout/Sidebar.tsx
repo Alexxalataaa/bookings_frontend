@@ -110,7 +110,6 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean, onClose:
               {userRole === "client" ? "Panel Cliente" : userRole === "superadmin" ? "Super Panel" : "Panel Negocio"}
             </p>
           </div>
-          </div>
           <button className="mobile-toggle" onClick={onClose} style={{ marginRight: 0 }}>
             <X size={20} />
           </button>
