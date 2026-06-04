@@ -850,40 +850,84 @@ export default function DashboardClient() {
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "24px" }}>
 
                     {/* Revenue Line Chart */}
-                    <div className="section-card" style={{ height: "360px" }}>
-                      <h4 style={{ fontSize: "16px", fontWeight: "bold", marginBottom: "16px" }}>Histórico de Ingresos</h4>
+                    <div className="section-card" style={{ height: "400px", padding: "24px" }}>
+                      <h4 style={{ fontSize: "16px", fontWeight: "bold", marginBottom: "24px", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--primary)" }}></span>
+                        Histórico de Ingresos
+                      </h4>
                       <ResponsiveContainer width="100%" height="85%">
-                        <AreaChart data={getRevenueChartData()}>
+                        <AreaChart data={getRevenueChartData()} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                           <defs>
                             <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.4} />
+                              <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.6} />
                               <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
                             </linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                          <XAxis dataKey="fecha" stroke="var(--text-muted)" fontSize={11} />
-                          <YAxis stroke="var(--text-muted)" fontSize={11} />
-                          <RechartsTooltip contentStyle={{ background: "#17191e", borderColor: "var(--border)" }} />
-                          <Area type="monotone" dataKey="total" stroke="var(--primary)" strokeWidth={2} fillOpacity={1} fill="url(#colorTotal)" />
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.05} vertical={false} />
+                          <XAxis dataKey="fecha" stroke="var(--text-muted)" fontSize={11} axisLine={false} tickLine={false} dy={10} />
+                          <YAxis tickFormatter={(val) => `${val}€`} stroke="var(--text-muted)" fontSize={11} axisLine={false} tickLine={false} />
+                          <RechartsTooltip 
+                            contentStyle={{ 
+                              background: "rgba(15, 17, 22, 0.85)", 
+                              backdropFilter: "blur(12px)", 
+                              border: "1px solid rgba(255,255,255,0.05)", 
+                              borderRadius: "12px", 
+                              boxShadow: "0 12px 40px rgba(0,0,0,0.5)",
+                              color: "#fff"
+                            }}
+                            itemStyle={{ color: "var(--primary)", fontWeight: "bold" }}
+                            cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1, strokeDasharray: "3 3" }}
+                            formatter={(value: any) => [`${value}€`, "Ingresos"]}
+                            labelStyle={{ color: "var(--text-muted)", marginBottom: "4px" }}
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="total" 
+                            stroke="var(--primary)" 
+                            strokeWidth={3} 
+                            fillOpacity={1} 
+                            fill="url(#colorTotal)"
+                            activeDot={{ r: 6, strokeWidth: 0, fill: "var(--primary)", style: { filter: "drop-shadow(0 0 8px rgba(99,102,241,0.8))" } }}
+                          />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
 
                     {/* Services Pie Chart */}
-                    <div className="section-card" style={{ height: "360px" }}>
-                      <h4 style={{ fontSize: "16px", fontWeight: "bold", marginBottom: "16px" }}>Distribución por Servicio</h4>
+                    <div className="section-card" style={{ height: "400px", padding: "24px" }}>
+                      <h4 style={{ fontSize: "16px", fontWeight: "bold", marginBottom: "24px", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent)" }}></span>
+                        Distribución por Servicio
+                      </h4>
                       <ResponsiveContainer width="100%" height="85%">
-                        <BarChart data={getServicesChartData()}>
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                          <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={10} />
-                          <YAxis stroke="var(--text-muted)" fontSize={11} />
-                          <RechartsTooltip contentStyle={{ background: "#17191e", borderColor: "var(--border)" }} />
-                          <Bar dataKey="value" fill="var(--primary)" radius={[4, 4, 0, 0]}>
-                            {getServicesChartData().map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={index % 2 === 0 ? "var(--primary)" : "var(--accent)"} />
-                            ))}
-                          </Bar>
-                        </BarChart>
+                        <PieChart>
+                          <RechartsTooltip 
+                            contentStyle={{ 
+                              background: "rgba(15, 17, 22, 0.85)", 
+                              backdropFilter: "blur(12px)", 
+                              border: "1px solid rgba(255,255,255,0.05)", 
+                              borderRadius: "12px", 
+                              boxShadow: "0 12px 40px rgba(0,0,0,0.5)",
+                              color: "#fff"
+                            }}
+                            itemStyle={{ fontWeight: "bold" }}
+                            formatter={(value: any) => [`${value} reservas`, "Cantidad"]}
+                          />
+                          <Pie
+                            data={getServicesChartData()}
+                            innerRadius={75}
+                            outerRadius={110}
+                            paddingAngle={6}
+                            dataKey="value"
+                            stroke="none"
+                            cornerRadius={6}
+                          >
+                            {getServicesChartData().map((entry, index) => {
+                              const colors = ["#6366f1", "#a855f7", "#ec4899", "#14b8a6", "#f59e0b", "#3b82f6"];
+                              return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                            })}
+                          </Pie>
+                        </PieChart>
                       </ResponsiveContainer>
                     </div>
 
