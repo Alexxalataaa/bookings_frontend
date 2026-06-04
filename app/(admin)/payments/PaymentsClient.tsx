@@ -153,6 +153,7 @@ export default function PaymentsClient() {
     try {
       const created = await createPayment({
         ...formData,
+        businessName: userRole === "business" ? (localStorage.getItem("user_name") || "Mi Comercio") : formData.businessName,
         amount: formData.amount === "" ? 0 : Number(formData.amount),
       });
       setPayments([created, ...payments]);
@@ -309,16 +310,18 @@ export default function PaymentsClient() {
                     required
                   />
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <label style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-muted)" }}>Comercio</label>
-                  <input
-                    className="input"
-                    placeholder="Nombre del comercio"
-                    value={formData.businessName}
-                    onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                    required
-                  />
-                </div>
+                {userRole !== "business" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <label style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-muted)" }}>Comercio</label>
+                    <input
+                      className="input"
+                      placeholder="Nombre del comercio"
+                      value={formData.businessName}
+                      onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                      required={userRole !== "business"}
+                    />
+                  </div>
+                )}
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   <label style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-muted)" }}>Importe (€)</label>
                   <input

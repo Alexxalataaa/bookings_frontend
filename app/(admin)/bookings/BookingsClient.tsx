@@ -307,12 +307,21 @@ export default function BookingsClient() {
   const [showBusinessEditDropdown, setShowBusinessEditDropdown] = useState(false);
 
   useEffect(() => {
-    setUserRole(localStorage.getItem("user_role"));
+    const role = localStorage.getItem("user_role");
+    setUserRole(role);
     Promise.all([getAppointments(), getCustomers(), getBusinesses()])
       .then(([appointments, customersData, businessesData]) => {
         setBookings(appointments);
         setCustomers(customersData);
         setAllBusinesses(businessesData);
+        if (role === "business" && businessesData.length > 0) {
+          // Auto-select the first business they own (or the first one returned if backend filters)
+          const biz = businessesData[0];
+          setCreateForm(prev => ({ ...prev, businessId: biz.id }));
+          setBusinessSearchText(biz.name);
+          setEditForm(prev => ({ ...prev, businessId: biz.id }));
+          setBusinessEditSearchText(biz.name);
+        }
       })
       .catch((err) => console.error("Error fetching data:", err))
       .finally(() => setInitialLoading(false));
@@ -749,48 +758,50 @@ export default function BookingsClient() {
                   </select>
                 )}
                 
-                <div style={{ position: "relative" }}>
-                  <input
-                    className="input"
-                    type="text"
-                    placeholder="Buscar negocio..."
-                    value={businessSearchText}
-                    onChange={(e) => {
-                      setBusinessSearchText(e.target.value);
-                      setShowBusinessDropdown(true);
-                      if (createForm.businessId) updateCreateForm("businessId", 0);
-                    }}
-                    onFocus={() => setShowBusinessDropdown(true)}
-                    onBlur={() => setTimeout(() => setShowBusinessDropdown(false), 200)}
-                    required
-                  />
-                  {showBusinessDropdown && businessSearchText && (
-                    <ul style={{
-                      position: "absolute", top: "100%", left: 0, right: 0,
-                      background: "rgba(15,17,22,0.95)", backdropFilter: "blur(10px)",
-                      border: "1px solid var(--border)", borderRadius: "8px",
-                      marginTop: "4px", zIndex: 50, listStyle: "none", padding: "4px",
-                      maxHeight: "200px", overflowY: "auto"
-                    }}>
-                      {allBusinesses.filter(b => b.name.toLowerCase().includes(businessSearchText.toLowerCase())).map(b => (
-                        <li 
-                          key={b.id} 
-                          style={{ padding: "8px 12px", cursor: "pointer", borderRadius: "4px", fontSize: "14px" }}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            updateCreateForm("businessId", b.id);
-                            setBusinessSearchText(b.name);
-                            setShowBusinessDropdown(false);
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = "var(--primary-gradient)"}
-                          onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                        >
-                          {b.name}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+                {userRole !== "business" && (
+                  <div style={{ position: "relative" }}>
+                    <input
+                      className="input"
+                      type="text"
+                      placeholder="Buscar negocio..."
+                      value={businessSearchText}
+                      onChange={(e) => {
+                        setBusinessSearchText(e.target.value);
+                        setShowBusinessDropdown(true);
+                        if (createForm.businessId) updateCreateForm("businessId", 0);
+                      }}
+                      onFocus={() => setShowBusinessDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowBusinessDropdown(false), 200)}
+                      required={userRole !== "business"}
+                    />
+                    {showBusinessDropdown && businessSearchText && (
+                      <ul style={{
+                        position: "absolute", top: "100%", left: 0, right: 0,
+                        background: "rgba(15,17,22,0.95)", backdropFilter: "blur(10px)",
+                        border: "1px solid var(--border)", borderRadius: "8px",
+                        marginTop: "4px", zIndex: 50, listStyle: "none", padding: "4px",
+                        maxHeight: "200px", overflowY: "auto"
+                      }}>
+                        {allBusinesses.filter(b => b.name.toLowerCase().includes(businessSearchText.toLowerCase())).map(b => (
+                          <li 
+                            key={b.id} 
+                            style={{ padding: "8px 12px", cursor: "pointer", borderRadius: "4px", fontSize: "14px" }}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              updateCreateForm("businessId", b.id);
+                              setBusinessSearchText(b.name);
+                              setShowBusinessDropdown(false);
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = "var(--primary-gradient)"}
+                            onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                          >
+                            {b.name}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
                 <select
                   className="select"
                   style={{ background: "#0f1116", color: "var(--text)" }}
@@ -886,48 +897,50 @@ export default function BookingsClient() {
                   </select>
                 )}
 
-                <div style={{ position: "relative" }}>
-                  <input
-                    className="input"
-                    type="text"
-                    placeholder="Buscar negocio..."
-                    value={businessEditSearchText}
-                    onChange={(e) => {
-                      setBusinessEditSearchText(e.target.value);
-                      setShowBusinessEditDropdown(true);
-                      if (editForm.businessId) updateEditForm("businessId", 0);
-                    }}
-                    onFocus={() => setShowBusinessEditDropdown(true)}
-                    onBlur={() => setTimeout(() => setShowBusinessEditDropdown(false), 200)}
-                    required
-                  />
-                  {showBusinessEditDropdown && businessEditSearchText && (
-                    <ul style={{
-                      position: "absolute", top: "100%", left: 0, right: 0,
-                      background: "rgba(15,17,22,0.95)", backdropFilter: "blur(10px)",
-                      border: "1px solid var(--border)", borderRadius: "8px",
-                      marginTop: "4px", zIndex: 50, listStyle: "none", padding: "4px",
-                      maxHeight: "200px", overflowY: "auto"
-                    }}>
-                      {allBusinesses.filter(b => b.name.toLowerCase().includes(businessEditSearchText.toLowerCase())).map(b => (
-                        <li 
-                          key={b.id} 
-                          style={{ padding: "8px 12px", cursor: "pointer", borderRadius: "4px", fontSize: "14px" }}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            updateEditForm("businessId", b.id);
-                            setBusinessEditSearchText(b.name);
-                            setShowBusinessEditDropdown(false);
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = "var(--primary-gradient)"}
-                          onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                        >
-                          {b.name}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+                {userRole !== "business" && (
+                  <div style={{ position: "relative" }}>
+                    <input
+                      className="input"
+                      type="text"
+                      placeholder="Buscar negocio..."
+                      value={businessEditSearchText}
+                      onChange={(e) => {
+                        setBusinessEditSearchText(e.target.value);
+                        setShowBusinessEditDropdown(true);
+                        if (editForm.businessId) updateEditForm("businessId", 0);
+                      }}
+                      onFocus={() => setShowBusinessEditDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowBusinessEditDropdown(false), 200)}
+                      required={userRole !== "business"}
+                    />
+                    {showBusinessEditDropdown && businessEditSearchText && (
+                      <ul style={{
+                        position: "absolute", top: "100%", left: 0, right: 0,
+                        background: "rgba(15,17,22,0.95)", backdropFilter: "blur(10px)",
+                        border: "1px solid var(--border)", borderRadius: "8px",
+                        marginTop: "4px", zIndex: 50, listStyle: "none", padding: "4px",
+                        maxHeight: "200px", overflowY: "auto"
+                      }}>
+                        {allBusinesses.filter(b => b.name.toLowerCase().includes(businessEditSearchText.toLowerCase())).map(b => (
+                          <li 
+                            key={b.id} 
+                            style={{ padding: "8px 12px", cursor: "pointer", borderRadius: "4px", fontSize: "14px" }}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              updateEditForm("businessId", b.id);
+                              setBusinessEditSearchText(b.name);
+                              setShowBusinessEditDropdown(false);
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = "var(--primary-gradient)"}
+                            onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                          >
+                            {b.name}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
                 <select
                   className="select"
                   style={{ background: "#0f1116", color: "var(--text)" }}
