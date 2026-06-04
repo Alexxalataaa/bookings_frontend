@@ -474,13 +474,11 @@ export default function LoginPage() {
             <>
               {/* Logo & Header */}
               <div className={styles.header}>
-                <div className={styles.logo}>
-                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                    <path d="M8 16L14 22L24 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                <div className={styles.logo} style={{ background: "transparent", overflow: "hidden" }}>
+                  <img src="/krono_logo.png" alt="Krono Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 </div>
                 <div>
-                  <h1 className={styles.title}>BookFlow</h1>
+                  <h1 className={styles.title}>Krono</h1>
                   <p className={styles.subtitle}>
                     {role === "superadmin"
                       ? "Consola de Superadmin"

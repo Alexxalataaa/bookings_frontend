@@ -2,8 +2,8 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Bookings Admin",
-  description: "Base inicial del proyecto de gestión de reservas",
+  title: "Krono - Plataforma de Puntualidad",
+  description: "Gestión de tiempo y reservas para tu negocio",
 };
 
 export default function RootLayout({
