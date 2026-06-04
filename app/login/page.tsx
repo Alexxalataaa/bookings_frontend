@@ -657,30 +657,7 @@ export default function LoginPage() {
                   )}
                 </div>
 
-                <div className={styles.divider}></div>
 
-                {/* DEMO / QUICK ACCESS LOGINS FOR EXTREMELY USER FRIENDLY WORKFLOW */}
-                <div className={styles.demo}>
-                  <p className={styles.demoTitle}>Acceso Rápido de Demostración</p>
-                  <div className={styles.demoBox}>
-                    <button 
-                      type="button" 
-                      onClick={() => handleDemoLogin("client")}
-                      className="secondary-btn"
-                      style={{ fontSize: "11px", display: "flex", justifyContent: "center", padding: "8px" }}
-                    >
-                      Demo Cliente
-                    </button>
-                    <button 
-                      type="button" 
-                      onClick={() => handleDemoLogin("business")}
-                      className="secondary-btn"
-                      style={{ fontSize: "11px", display: "flex", justifyContent: "center", padding: "8px" }}
-                    >
-                      Demo Empresa
-                    </button>
-                  </div>
-                </div>
 
               </form>
             </>
