@@ -491,25 +491,6 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* Dynamic Role Tab Selector */}
-              {!isRegistering && role !== "superadmin" && (
-                <div style={{ display: "flex", background: "rgba(255,255,255,0.03)", padding: "4px", borderRadius: "12px", border: "1px solid var(--border)", marginBottom: "20px" }}>
-                  <button 
-                    type="button" 
-                    onClick={() => setRole("client")}
-                    style={{ flex: 1, padding: "8px 12px", border: "none", borderRadius: "8px", background: role === "client" ? "var(--primary-gradient)" : "transparent", color: "white", fontSize: "13px", fontWeight: "bold", cursor: "pointer", transition: "all 0.3s" }}
-                  >
-                    Soy Cliente
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => setRole("business")}
-                    style={{ flex: 1, padding: "8px 12px", border: "none", borderRadius: "8px", background: role === "business" ? "var(--primary-gradient)" : "transparent", color: "white", fontSize: "13px", fontWeight: "bold", cursor: "pointer", transition: "all 0.3s" }}
-                  >
-                    Soy Empresa
-                  </button>
-                </div>
-              )}
 
               {/* Registration Role Selector */}
               {isRegistering && (
