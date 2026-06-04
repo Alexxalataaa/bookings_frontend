@@ -121,10 +121,17 @@ async function authedFetch<T>(input: string, init: RequestInit = {}): Promise<T>
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const res = await fetch(input, {
-    ...init,
-    headers,
-  });
+  let res: Response;
+
+  try {
+    res = await fetch(input, {
+      ...init,
+      headers,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to fetch';
+    throw new Error(`Network error: ${message}`);
+  }
 
   if (res.status === 401) {
     // If unauthorized, clear local session state and redirect to login

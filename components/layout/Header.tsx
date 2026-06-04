@@ -31,7 +31,10 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar: () => voi
   if (userRole === "superadmin") {
     title = "BookFlow Superadmin";
     subtitle = "Consola de administración global";
-    if (pathname.includes("/metrics")) {
+    if (pathname.includes("/superadmin/dashboard")) {
+      title = "Dashboard";
+      subtitle = "Visión general para superadmin";
+    } else if (pathname.includes("/metrics")) {
       title = "Métricas Globales";
       subtitle = "Métricas globales del sistema y rendimiento general";
     } else if (pathname.includes("/accounts")) {

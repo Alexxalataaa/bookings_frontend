@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Calendar, Users, CreditCard, X, Sun, Moon, User, Search, History, Settings, FileCode2 } from "lucide-react";
+import { LayoutDashboard, Calendar, Users, CreditCard, X, Sun, Moon, User, Search, History, Settings, FileCode2, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
@@ -20,7 +20,8 @@ const businessMenuItems = [
 ];
 
 const superadminMenuItems = [
-  { label: "Métricas Globales", href: "/superadmin/metrics", icon: LayoutDashboard },
+  { label: "Dashboard", href: "/superadmin/dashboard", icon: LayoutDashboard },
+  { label: "Métricas Globales", href: "/superadmin/metrics", icon: TrendingUp },
   { label: "Gestión Negocios", href: "/superadmin/businesses", icon: FileCode2 },
   { label: "Cuentas", href: "/superadmin/accounts", icon: Settings },
   { label: "Mi Perfil", href: "/profile", icon: User },
