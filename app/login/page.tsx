@@ -344,7 +344,7 @@ export default function LoginPage() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           className={styles.card}
-          style={{ backdropFilter: "blur(16px)", background: "rgba(23, 25, 30, 0.75)" }}
+          style={{ backdropFilter: "blur(16px)", background: "var(--surface)" }}
         >
           {isOnboarding ? (
             /* ONBOARDING FLOW */
@@ -406,7 +406,7 @@ export default function LoginPage() {
 
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "200px", overflowY: "auto", paddingRight: "4px" }}>
                       {services.map((service, index) => (
-                        <div key={index} style={{ background: "rgba(255,255,255,0.03)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div key={index} style={{ background: "var(--bg)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <div>
                             <p style={{ margin: 0, fontSize: "13px", fontWeight: "bold" }}>{service.name}</p>
                             <p style={{ margin: 0, fontSize: "11px", color: "var(--text-muted)" }}>{service.duration} mins</p>
@@ -494,7 +494,7 @@ export default function LoginPage() {
 
               {/* Registration Role Selector */}
               {isRegistering && (
-                <div style={{ display: "flex", background: "rgba(255,255,255,0.03)", padding: "4px", borderRadius: "12px", border: "1px solid var(--border)", marginBottom: "20px" }}>
+                <div style={{ display: "flex", background: "var(--bg)", padding: "4px", borderRadius: "12px", border: "1px solid var(--border)", marginBottom: "20px" }}>
                   <button 
                     type="button" 
                     onClick={() => setRole("client")}

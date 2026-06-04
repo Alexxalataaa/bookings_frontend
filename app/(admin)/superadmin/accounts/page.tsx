@@ -8,8 +8,6 @@ import { ShieldCheck, Plus, Trash2, Activity } from "lucide-react";
 export default function AccountsPage() {
   const [users, setUsers] = useState<SystemUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ fullName: "", email: "", username: "", password: "", role: "superadmin" });
 
   useEffect(() => {
     fetchUsers();
@@ -27,18 +25,7 @@ export default function AccountsPage() {
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await createUser(formData);
-      setIsModalOpen(false);
-      setFormData({ fullName: "", email: "", username: "", password: "", role: "superadmin" });
-      fetchUsers();
-    } catch (err) {
-      console.error(err);
-      alert("Error al crear cuenta. (Revisa si el usuario/email ya existen)");
-    }
-  };
+
 
   const handleDelete = async (id: number) => {
     if (confirm("¿Eliminar este usuario administrador?")) {
@@ -67,10 +54,6 @@ export default function AccountsPage() {
           <h2>Gestión de Cuentas</h2>
           <p>Administra las cuentas con acceso al panel.</p>
         </div>
-        <button className="primary-btn" onClick={() => setIsModalOpen(true)}>
-          <Plus size={18} />
-          <span>Nuevo Administrador</span>
-        </button>
       </section>
 
       <div className="table-scroll-wrapper">
@@ -110,42 +93,7 @@ export default function AccountsPage() {
         </table>
       </div>
 
-      {isModalOpen && (
-        <div className="modal-overlay">
-          <motion.div className="modal-content" initial={{ scale: 0.95 }} animate={{ scale: 1 }}>
-            <h3>Nueva Cuenta Administrativa</h3>
-            <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "16px" }}>
-              <div className="form-group">
-                <label>Nombre Completo *</label>
-                <input required value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="input-field" />
-              </div>
-              <div className="form-group">
-                <label>Correo Electrónico *</label>
-                <input type="email" required value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="input-field" />
-              </div>
-              <div className="form-group">
-                <label>Nombre de Usuario *</label>
-                <input required value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="input-field" />
-              </div>
-              <div className="form-group">
-                <label>Contraseña *</label>
-                <input type="password" required value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="input-field" minLength={6} />
-              </div>
-              <div className="form-group">
-                <label>Rol</label>
-                <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} className="input-field">
-                  <option value="business">BUSINESS</option>
-                  <option value="superadmin">SUPERADMIN</option>
-                </select>
-              </div>
-              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
-                <button type="button" className="secondary-btn" onClick={() => setIsModalOpen(false)}>Cancelar</button>
-                <button type="submit" className="primary-btn">Crear Cuenta</button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
+
     </div>
   );
 }

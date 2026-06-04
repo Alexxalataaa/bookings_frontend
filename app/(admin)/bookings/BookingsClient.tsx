@@ -19,6 +19,7 @@ import {
   getBusinesses,
 } from "@/lib/api";
 import { useEffect } from "react";
+import { addMinutes, format, isBefore, setHours, setMinutes } from "date-fns";
 import { 
   Plus, 
   List, 
@@ -348,6 +349,64 @@ export default function BookingsClient() {
   // Derive selected customer for create and edit forms
   const selectedCustomer = useMemo(() => customers.find(c => c.id === createForm.customerId), [customers, createForm.customerId]);
   const selectedEditCustomer = useMemo(() => customers.find(c => c.id === editForm.customerId), [customers, editForm.customerId]);
+
+  const availableSlotsCreate = useMemo(() => {
+    const biz = allBusinesses.find(b => b.id === createForm.businessId);
+    if (!createForm.date || !biz || !biz.hours) return [];
+    let hoursObj: any = {};
+    try { hoursObj = JSON.parse(biz.hours); } catch { return []; }
+    const [year, month, day] = createForm.date.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    const dayIndex = date.getDay();
+    let dayKey = "";
+    if (dayIndex >= 1 && dayIndex <= 5) dayKey = "monFri";
+    else if (dayIndex === 6) dayKey = "sat";
+    else if (dayIndex === 0) dayKey = "sun";
+    const timeRange = hoursObj[dayKey];
+    if (!timeRange || timeRange.toLowerCase() === "cerrado") return [];
+    const [startStr, endStr] = timeRange.split("-").map((s: string) => s.trim());
+    if (!startStr || !endStr) return [];
+    const [startH, startM] = startStr.split(":").map(Number);
+    const [endH, endM] = endStr.split(":").map(Number);
+    let current = setMinutes(setHours(date, startH), startM);
+    const endTime = setMinutes(setHours(date, endH), endM);
+    const slots: string[] = [];
+    const now = new Date();
+    while (isBefore(current, endTime)) {
+      if (current > now) slots.push(format(current, "HH:mm"));
+      current = addMinutes(current, 30);
+    }
+    return slots;
+  }, [createForm.date, createForm.businessId, allBusinesses]);
+
+  const availableSlotsEdit = useMemo(() => {
+    const biz = allBusinesses.find(b => b.id === editForm.businessId);
+    if (!editForm.date || !biz || !biz.hours) return [];
+    let hoursObj: any = {};
+    try { hoursObj = JSON.parse(biz.hours); } catch { return []; }
+    const [year, month, day] = editForm.date.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    const dayIndex = date.getDay();
+    let dayKey = "";
+    if (dayIndex >= 1 && dayIndex <= 5) dayKey = "monFri";
+    else if (dayIndex === 6) dayKey = "sat";
+    else if (dayIndex === 0) dayKey = "sun";
+    const timeRange = hoursObj[dayKey];
+    if (!timeRange || timeRange.toLowerCase() === "cerrado") return [];
+    const [startStr, endStr] = timeRange.split("-").map((s: string) => s.trim());
+    if (!startStr || !endStr) return [];
+    const [startH, startM] = startStr.split(":").map(Number);
+    const [endH, endM] = endStr.split(":").map(Number);
+    let current = setMinutes(setHours(date, startH), startM);
+    const endTime = setMinutes(setHours(date, endH), endM);
+    const slots: string[] = [];
+    while (isBefore(current, endTime)) {
+      slots.push(format(current, "HH:mm"));
+      current = addMinutes(current, 30);
+    }
+    return slots;
+  }, [editForm.date, editForm.businessId, allBusinesses]);
+
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingBookingId, setEditingBookingId] = useState<number | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
@@ -641,17 +700,23 @@ export default function BookingsClient() {
                 <input
                   className="input"
                   type="date"
+                  min={new Date().toISOString().split("T")[0]}
                   value={createForm.date}
                   onChange={(e) => updateCreateForm("date", e.target.value)}
                   required
                 />
-                <input
-                  className="input"
-                  type="time"
+                <select
+                  className="select"
                   value={createForm.time}
                   onChange={(e) => updateCreateForm("time", e.target.value)}
                   required
-                />
+                  disabled={!createForm.date || availableSlotsCreate.length === 0}
+                >
+                  <option value="">{availableSlotsCreate.length > 0 ? "Elige hora" : "Cerrado / Sin horarios"}</option>
+                  {availableSlotsCreate.map(slot => (
+                    <option key={slot} value={slot}>{slot}</option>
+                  ))}
+                </select>
                 {userRole !== "client" && (
                   <select
                     className="select"
@@ -777,13 +842,18 @@ export default function BookingsClient() {
                   onChange={(e) => updateEditForm("date", e.target.value)}
                   required
                 />
-                <input
-                  className="input"
-                  type="time"
+                <select
+                  className="select"
                   value={editForm.time}
                   onChange={(e) => updateEditForm("time", e.target.value)}
                   required
-                />
+                  disabled={!editForm.date || availableSlotsEdit.length === 0}
+                >
+                  <option value="">{availableSlotsEdit.length > 0 ? "Elige hora" : "Cerrado / Sin horarios"}</option>
+                  {availableSlotsEdit.map(slot => (
+                    <option key={slot} value={slot}>{slot}</option>
+                  ))}
+                </select>
                 {userRole !== "client" && (
                   <select
                     className="select"

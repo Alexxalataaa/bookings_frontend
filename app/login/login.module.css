@@ -96,7 +96,7 @@
   padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg);
   color: var(--text);
   font-size: 14px;
   font-weight: 500;
@@ -105,13 +105,13 @@
 }
 
 .input::placeholder {
-  color: #f8fafc; /* Máximo contraste para WCAG AAA */
+  color: var(--text-muted);
   opacity: 1;
 }
 
 .input:hover:not(:disabled) {
   border-color: var(--border-focus);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface);
 }
 
 .input:focus {

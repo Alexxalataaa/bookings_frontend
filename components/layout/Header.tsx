@@ -1,13 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Menu, LogOut } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 
 export default function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [userRole, setUserRole] = useState<"client" | "business" | "superadmin">("business");
+
+  const handleLogout = () => {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user_role");
+    localStorage.removeItem("user_name");
+    router.replace("/login");
+  };
 
   useEffect(() => {
     const savedRole = localStorage.getItem("user_role") as any;
@@ -87,6 +95,13 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar: () => voi
       
       <div className="admin-header__actions">
         <NotificationBell />
+        <button 
+          onClick={handleLogout}
+          style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(244, 63, 94, 0.1)", color: "#f43f5e", border: "1px solid rgba(244, 63, 94, 0.2)", padding: "8px 12px", borderRadius: "8px", cursor: "pointer", fontSize: "13px", fontWeight: "bold", marginLeft: "8px" }}
+        >
+          <LogOut size={16} />
+          <span className="hidden-mobile">Salir</span>
+        </button>
       </div>
     </header>
   );

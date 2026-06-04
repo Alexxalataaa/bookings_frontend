@@ -23,6 +23,7 @@ const superadminMenuItems = [
   { label: "Métricas Globales", href: "/superadmin/metrics", icon: LayoutDashboard },
   { label: "Gestión Negocios", href: "/superadmin/businesses", icon: FileCode2 },
   { label: "Cuentas", href: "/superadmin/accounts", icon: Settings },
+  { label: "Mi Perfil", href: "/profile", icon: User },
 ];
 
 const themes = [

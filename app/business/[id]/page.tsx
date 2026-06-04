@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useMemo } from "react";
+import { addMinutes, format, isBefore, setHours, setMinutes } from "date-fns";
 import { useRouter } from "next/navigation";
 import { 
   getBusiness, 
@@ -58,12 +59,53 @@ export default function BusinessLandingPage({ params }: PageProps) {
     const token = localStorage.getItem("auth_token");
     if (token) {
       setIsGuest(false);
-      const name = localStorage.getItem("user_name") || "";
-      setGuestName(name);
+      setGuestName(localStorage.getItem("user_name") || "");
     }
 
     fetchBusinessData();
   }, [id]);
+
+  const availableSlots = useMemo(() => {
+    if (!selectedDate || !business || !business.hours) return [];
+    let hoursObj: any = {};
+    try {
+      hoursObj = JSON.parse(business.hours);
+    } catch {
+      return [];
+    }
+    
+    const [year, month, day] = selectedDate.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    const dayIndex = date.getDay();
+    
+    let dayKey = "";
+    if (dayIndex >= 1 && dayIndex <= 5) dayKey = "monFri";
+    else if (dayIndex === 6) dayKey = "sat";
+    else if (dayIndex === 0) dayKey = "sun";
+    
+    const timeRange = hoursObj[dayKey];
+    if (!timeRange || timeRange.toLowerCase() === "cerrado") return [];
+    
+    const [startStr, endStr] = timeRange.split("-").map((s: string) => s.trim());
+    if (!startStr || !endStr) return [];
+    
+    const [startH, startM] = startStr.split(":").map(Number);
+    const [endH, endM] = endStr.split(":").map(Number);
+    
+    let current = setMinutes(setHours(date, startH), startM);
+    const endTime = setMinutes(setHours(date, endH), endM);
+    
+    const slots: string[] = [];
+    const now = new Date();
+    
+    while (isBefore(current, endTime)) {
+      if (current > now) {
+        slots.push(format(current, "HH:mm"));
+      }
+      current = addMinutes(current, 30);
+    }
+    return slots;
+  }, [selectedDate, business]);
 
   async function fetchBusinessData() {
     try {
@@ -409,15 +451,12 @@ export default function BusinessLandingPage({ params }: PageProps) {
                       value={selectedTime}
                       onChange={(e) => setSelectedTime(e.target.value)}
                       className="select"
+                      disabled={!selectedDate || availableSlots.length === 0}
                     >
-                      <option value="">Elige hora</option>
-                      <option value="09:00">09:00</option>
-                      <option value="10:00">10:00</option>
-                      <option value="11:30">11:30</option>
-                      <option value="13:00">13:00</option>
-                      <option value="16:00">16:00</option>
-                      <option value="17:30">17:30</option>
-                      <option value="19:00">19:00</option>
+                      <option value="">{availableSlots.length > 0 ? "Elige hora" : "Sin horarios disponibles"}</option>
+                      {availableSlots.map(slot => (
+                        <option key={slot} value={slot}>{slot}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
