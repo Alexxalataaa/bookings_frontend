@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Calendar, Users, CreditCard, X, Sun, Moon, User, Search, History, Settings, FileCode2, TrendingUp } from "lucide-react";
+import { LayoutDashboard, Calendar, Users, CreditCard, X, Sun, Moon, User, Search, History, Settings, FileCode2, TrendingUp, Palette, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
@@ -41,6 +41,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean, onClose:
   const [activeBrightness, setActiveBrightness] = useState("dark");
   const [userRole, setUserRole] = useState<"client" | "business" | "superadmin">("business");
   const [customColor, setCustomColor] = useState("#a855f7");
+  const [showAppearance, setShowAppearance] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("app-theme") || "default";
@@ -156,94 +157,124 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean, onClose:
         })}
       </nav>
 
-      <div style={{ marginTop: "32px", paddingLeft: "12px", display: "flex", flexDirection: "column", gap: "20px" }}>
-        
-        {/* Brightness Control */}
-        <div>
-          <p style={{ fontSize: "12px", textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600, letterSpacing: "0.05em", margin: "0 0 10px 0" }}>Apariencia</p>
-          <div style={{ display: "flex", gap: "8px" }}>
-            <button
-              onClick={() => {
-                setActiveBrightness("dark");
-                document.documentElement.setAttribute("data-brightness", "dark");
-                localStorage.setItem("app-brightness", "dark");
-              }}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center",
-                width: "36px", height: "36px", borderRadius: "8px",
-                background: activeBrightness === "dark" ? "rgba(255,255,255,0.1)" : "transparent",
-                color: activeBrightness === "dark" ? "var(--text)" : "var(--text-muted)",
-                border: "1px solid",
-                borderColor: activeBrightness === "dark" ? "var(--border-focus)" : "transparent",
-                cursor: "pointer", padding: 0
-              }}
-              title="Modo Oscuro"
-            >
-              <Moon size={18} />
-            </button>
-            <button
-              onClick={() => {
-                setActiveBrightness("light");
-                document.documentElement.setAttribute("data-brightness", "light");
-                localStorage.setItem("app-brightness", "light");
-              }}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center",
-                width: "36px", height: "36px", borderRadius: "8px",
-                background: activeBrightness === "light" ? "rgba(0,0,0,0.05)" : "transparent",
-                color: activeBrightness === "light" ? "var(--text)" : "var(--text-muted)",
-                border: "1px solid",
-                borderColor: activeBrightness === "light" ? "var(--border-focus)" : "transparent",
-                cursor: "pointer", padding: 0
-              }}
-              title="Modo Claro"
-            >
-              <Sun size={18} />
-            </button>
-          </div>
-        </div>
+      <div style={{ marginTop: "auto", padding: "16px 16px 12px", display: "flex", flexDirection: "column", gap: "12px" }}>
+        <button
+          onClick={() => setShowAppearance((current) => !current)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            width: "100%",
+            gap: "10px",
+            padding: "12px 14px",
+            borderRadius: "12px",
+            background: "rgba(255,255,255,0.04)",
+            color: "var(--text)",
+            border: "1px solid var(--border)",
+            cursor: "pointer",
+          }}
+        >
+          <span style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 700 }}>
+            <Palette size={18} />
+            Apariencia
+          </span>
+          <ChevronDown
+            size={18}
+            style={{ transform: showAppearance ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease" }}
+          />
+        </button>
 
-        {/* Theme Control */}
-        <div>
-          <p style={{ fontSize: "12px", textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600, letterSpacing: "0.05em", margin: "0 0 10px 0" }}>Color</p>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "nowrap", overflowX: "auto", paddingBottom: "8px" }} className="hide-scrollbar">
-            {themes.map(t => (
-              <button 
-                key={t.id}
-                onClick={() => changeTheme(t.id)}
-                style={{ 
-                  width: "24px", height: "24px", borderRadius: "50%", 
-                  background: t.color, 
-                  border: activeTheme === t.id ? "2px solid var(--text)" : "2px solid transparent",
-                  cursor: "pointer", padding: 0,
-                  boxShadow: activeTheme === t.id ? "0 0 0 1px var(--text-muted)" : "none",
-                  flexShrink: 0
-                }}
-                title={t.label}
-              />
-            ))}
-            
-            {/* Custom Color Picker */}
-            <div 
-              style={{ 
-                position: "relative", width: "24px", height: "24px", borderRadius: "50%", 
-                overflow: "hidden", flexShrink: 0, 
-                border: activeTheme === "custom" ? "2px solid var(--text)" : "2px solid transparent",
-                boxShadow: activeTheme === "custom" ? "0 0 0 1px var(--text-muted)" : "none",
-                background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)",
-                cursor: "pointer", padding: 0
-              }}
-              title="Personalizado"
-            >
-              <input 
-                type="color"
-                value={customColor}
-                onChange={handleCustomColorChange}
-                style={{ opacity: 0, position: "absolute", top: 0, left: 0, width: "100%", height: "100%", cursor: "pointer" }}
-              />
+        {showAppearance && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+            <div>
+              <p style={{ fontSize: "12px", textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600, letterSpacing: "0.05em", margin: "0 0 10px 0" }}>
+                Modo
+              </p>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  onClick={() => {
+                    setActiveBrightness("dark");
+                    document.documentElement.setAttribute("data-brightness", "dark");
+                    localStorage.setItem("app-brightness", "dark");
+                  }}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    width: "36px", height: "36px", borderRadius: "10px",
+                    background: activeBrightness === "dark" ? "rgba(255,255,255,0.1)" : "transparent",
+                    color: activeBrightness === "dark" ? "var(--text)" : "var(--text-muted)",
+                    border: "1px solid",
+                    borderColor: activeBrightness === "dark" ? "var(--border-focus)" : "transparent",
+                    cursor: "pointer", padding: 0
+                  }}
+                  title="Modo Oscuro"
+                >
+                  <Moon size={18} />
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveBrightness("light");
+                    document.documentElement.setAttribute("data-brightness", "light");
+                    localStorage.setItem("app-brightness", "light");
+                  }}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    width: "36px", height: "36px", borderRadius: "10px",
+                    background: activeBrightness === "light" ? "rgba(0,0,0,0.05)" : "transparent",
+                    color: activeBrightness === "light" ? "var(--text)" : "var(--text-muted)",
+                    border: "1px solid",
+                    borderColor: activeBrightness === "light" ? "var(--border-focus)" : "transparent",
+                    cursor: "pointer", padding: 0
+                  }}
+                  title="Modo Claro"
+                >
+                  <Sun size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <p style={{ fontSize: "12px", textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600, letterSpacing: "0.05em", margin: "0 0 10px 0" }}>
+                Colores
+              </p>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "nowrap", overflowX: "auto", paddingBottom: "8px" }} className="hide-scrollbar">
+                {themes.map(t => (
+                  <button 
+                    key={t.id}
+                    onClick={() => changeTheme(t.id)}
+                    style={{ 
+                      width: "24px", height: "24px", borderRadius: "50%", 
+                      background: t.color, 
+                      border: activeTheme === t.id ? "2px solid var(--text)" : "2px solid transparent",
+                      cursor: "pointer", padding: 0,
+                      boxShadow: activeTheme === t.id ? "0 0 0 1px var(--text-muted)" : "none",
+                      flexShrink: 0
+                    }}
+                    title={t.label}
+                  />
+                ))}
+                
+                <div 
+                  style={{ 
+                    position: "relative", width: "24px", height: "24px", borderRadius: "50%", 
+                    overflow: "hidden", flexShrink: 0, 
+                    border: activeTheme === "custom" ? "2px solid var(--text)" : "2px solid transparent",
+                    boxShadow: activeTheme === "custom" ? "0 0 0 1px var(--text-muted)" : "none",
+                    background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)",
+                    cursor: "pointer", padding: 0
+                  }}
+                  title="Personalizado"
+                >
+                  <input 
+                    type="color"
+                    value={customColor}
+                    onChange={handleCustomColorChange}
+                    style={{ opacity: 0, position: "absolute", top: 0, left: 0, width: "100%", height: "100%", cursor: "pointer" }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
       
       <div style={{ marginTop: "auto", padding: "12px", opacity: 0.4, fontSize: "11px", fontWeight: 600, letterSpacing: "0.05em" }}>
