@@ -16,6 +16,7 @@ import {
   getAppointments,
   getCustomers,
   getMyBusinesses,
+  getBusinesses,
 } from "@/lib/api";
 import { useEffect } from "react";
 import { 
@@ -297,12 +298,20 @@ export default function BookingsClient() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [businessSearchText, setBusinessSearchText] = useState("");
+  const [showBusinessDropdown, setShowBusinessDropdown] = useState(false);
+  const [businessEditSearchText, setBusinessEditSearchText] = useState("");
+  const [showBusinessEditDropdown, setShowBusinessEditDropdown] = useState(false);
 
   useEffect(() => {
-    Promise.all([getAppointments(), getCustomers()])
-      .then(([appointments, customersData]) => {
+    setUserRole(localStorage.getItem("user_role"));
+    Promise.all([getAppointments(), getCustomers(), getBusinesses()])
+      .then(([appointments, customersData, businessesData]) => {
         setBookings(appointments);
         setCustomers(customersData);
+        setAllBusinesses(businessesData);
       })
       .catch((err) => console.error("Error fetching data:", err))
       .finally(() => setInitialLoading(false));
@@ -425,6 +434,10 @@ export default function BookingsClient() {
       businessId: booking.businessId,
       serviceName: booking.serviceName,
     });
+    
+    // Auto-populate the autocomplete search text for the business
+    const biz = allBusinesses.find(b => b.id === booking.businessId);
+    setBusinessEditSearchText(biz ? biz.name : "");
   }
 
   function closeEditForm() {
@@ -641,44 +654,76 @@ export default function BookingsClient() {
                 />
                 <select
                   className="select"
+                  style={{ background: "#0f1116", color: "var(--text)" }}
                   value={createForm.status}
                   onChange={(e) =>
                     updateCreateForm("status", e.target.value as BookingStatus)
                   }
                 >
-                  <option value="pending">Pendiente</option>
-                  <option value="confirmed">Confirmada</option>
-                  <option value="paid">Pagada</option>
+                  <option style={{ background: "#0f1116", color: "var(--text)" }} value="pending">Pendiente</option>
+                  <option style={{ background: "#0f1116", color: "var(--text)" }} value="confirmed">Confirmada</option>
+                  <option style={{ background: "#0f1116", color: "var(--text)" }} value="paid">Pagada</option>
                 </select>
-                                <select
-                  className="select"
-                  value={createForm.customerId}
-                  onChange={(e) => {
-                    const selectedId = Number(e.target.value);
-                    const selectedCustomer = customers.find(c => c.id === selectedId);
-                    updateCreateForm("customerId", selectedId);
-                    // For demo purposes, set businessId to same as customerId (replace with real mapping when available)
-                    if (selectedCustomer) {
-                      updateCreateForm("businessId", selectedId);
-                    }
-                  }}
-                  required
-                >
-                  <option value="" disabled>Selecciona cliente</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}{c.business ? ` (${c.business})` : ""}
-                    </option>
-                  ))}
-                </select>
-                {/* Auto‑populate business based on selected client */}
-                <input
-                  className="input"
-                  type="text"
-                  value={selectedCustomer?.business || ''}
-                  placeholder="Negocio"
-                  readOnly
-                />
+                
+                {userRole !== "client" && (
+                  <select
+                    className="select"
+                    style={{ background: "#0f1116", color: "var(--text)" }}
+                    value={createForm.customerId}
+                    onChange={(e) => updateCreateForm("customerId", Number(e.target.value))}
+                    required
+                  >
+                    <option style={{ background: "#0f1116", color: "var(--text)" }} value="" disabled>Selecciona cliente</option>
+                    {customers.map((c) => (
+                      <option style={{ background: "#0f1116", color: "var(--text)" }} key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                
+                <div style={{ position: "relative" }}>
+                  <input
+                    className="input"
+                    type="text"
+                    placeholder="Buscar negocio..."
+                    value={businessSearchText}
+                    onChange={(e) => {
+                      setBusinessSearchText(e.target.value);
+                      setShowBusinessDropdown(true);
+                      if (createForm.businessId) updateCreateForm("businessId", 0);
+                    }}
+                    onFocus={() => setShowBusinessDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowBusinessDropdown(false), 200)}
+                    required
+                  />
+                  {showBusinessDropdown && businessSearchText && (
+                    <ul style={{
+                      position: "absolute", top: "100%", left: 0, right: 0,
+                      background: "rgba(15,17,22,0.95)", backdropFilter: "blur(10px)",
+                      border: "1px solid var(--border)", borderRadius: "8px",
+                      marginTop: "4px", zIndex: 50, listStyle: "none", padding: "4px",
+                      maxHeight: "200px", overflowY: "auto"
+                    }}>
+                      {allBusinesses.filter(b => b.name.toLowerCase().includes(businessSearchText.toLowerCase())).map(b => (
+                        <li 
+                          key={b.id} 
+                          style={{ padding: "8px 12px", cursor: "pointer", borderRadius: "4px", fontSize: "14px" }}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            updateCreateForm("businessId", b.id);
+                            setBusinessSearchText(b.name);
+                            setShowBusinessDropdown(false);
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = "var(--primary-gradient)"}
+                          onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                        >
+                          {b.name}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
                 <input
                   className="input"
                   type="text"
@@ -733,43 +778,76 @@ export default function BookingsClient() {
                 />
                 <select
                   className="select"
+                  style={{ background: "#0f1116", color: "var(--text)" }}
                   value={editForm.status}
                   onChange={(e) =>
                     updateEditForm("status", e.target.value as BookingStatus)
                   }
                 >
-                  <option value="pending">Pendiente</option>
-                  <option value="confirmed">Confirmada</option>
-                  <option value="paid">Pagada</option>
+                  <option style={{ background: "#0f1116", color: "var(--text)" }} value="pending">Pendiente</option>
+                  <option style={{ background: "#0f1116", color: "var(--text)" }} value="confirmed">Confirmada</option>
+                  <option style={{ background: "#0f1116", color: "var(--text)" }} value="paid">Pagada</option>
                 </select>
-                                <select
-                  className="select"
-                  value={editForm.customerId}
-                  onChange={(e) => {
-                    const selectedId = Number(e.target.value);
-                    const selectedCustomer = customers.find(c => c.id === selectedId);
-                    updateEditForm("customerId", selectedId);
-                    // For demo purposes, set businessId to same as customerId (replace with real mapping when available)
-                    if (selectedCustomer) {
-                      updateEditForm("businessId", selectedId);
-                    }
-                  }}
-                  required
-                >
-                  <option value="" disabled>Selecciona cliente</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}{c.business ? ` (${c.business})` : ""}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  className="input"
-                  type="text"
-                  value={selectedEditCustomer?.business || ''}
-                  placeholder="Negocio"
-                  readOnly
-                />
+
+                {userRole !== "client" && (
+                  <select
+                    className="select"
+                    style={{ background: "#0f1116", color: "var(--text)" }}
+                    value={editForm.customerId}
+                    onChange={(e) => updateEditForm("customerId", Number(e.target.value))}
+                    required
+                  >
+                    <option style={{ background: "#0f1116", color: "var(--text)" }} value="" disabled>Selecciona cliente</option>
+                    {customers.map((c) => (
+                      <option style={{ background: "#0f1116", color: "var(--text)" }} key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                <div style={{ position: "relative" }}>
+                  <input
+                    className="input"
+                    type="text"
+                    placeholder="Buscar negocio..."
+                    value={businessEditSearchText}
+                    onChange={(e) => {
+                      setBusinessEditSearchText(e.target.value);
+                      setShowBusinessEditDropdown(true);
+                      if (editForm.businessId) updateEditForm("businessId", 0);
+                    }}
+                    onFocus={() => setShowBusinessEditDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowBusinessEditDropdown(false), 200)}
+                    required
+                  />
+                  {showBusinessEditDropdown && businessEditSearchText && (
+                    <ul style={{
+                      position: "absolute", top: "100%", left: 0, right: 0,
+                      background: "rgba(15,17,22,0.95)", backdropFilter: "blur(10px)",
+                      border: "1px solid var(--border)", borderRadius: "8px",
+                      marginTop: "4px", zIndex: 50, listStyle: "none", padding: "4px",
+                      maxHeight: "200px", overflowY: "auto"
+                    }}>
+                      {allBusinesses.filter(b => b.name.toLowerCase().includes(businessEditSearchText.toLowerCase())).map(b => (
+                        <li 
+                          key={b.id} 
+                          style={{ padding: "8px 12px", cursor: "pointer", borderRadius: "4px", fontSize: "14px" }}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            updateEditForm("businessId", b.id);
+                            setBusinessEditSearchText(b.name);
+                            setShowBusinessEditDropdown(false);
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = "var(--primary-gradient)"}
+                          onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                        >
+                          {b.name}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
                 <input
                   className="input"
                   type="text"
