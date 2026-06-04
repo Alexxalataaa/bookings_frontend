@@ -474,6 +474,51 @@ export default function DashboardClient() {
 
   return (
     <div className="page-stack">
+      <style>{`
+        .kpi-card {
+          transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+          position: relative;
+          overflow: hidden;
+        }
+        .kpi-card::before {
+          content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+          background: linear-gradient(to right, transparent, rgba(255,255,255,0.03), transparent);
+          transform: skewX(-20deg); transition: all 0.7s ease;
+        }
+        .kpi-card:hover::before {
+          left: 200%;
+        }
+        .kpi-card:hover {
+          transform: translateY(-8px) scale(1.02) !important;
+          box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+          border-color: rgba(99, 102, 241, 0.5) !important;
+          z-index: 10;
+        }
+        .kpi-card__value {
+          background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          filter: drop-shadow(0 2px 10px rgba(99,102,241,0.2));
+        }
+        .section-card {
+          transition: border-color 0.4s ease, box-shadow 0.4s ease !important;
+        }
+        .section-card:hover {
+          border-color: rgba(99, 102, 241, 0.3) !important;
+          box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5) !important;
+        }
+        .recharts-pie-sector {
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          cursor: pointer;
+          filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+        }
+        .recharts-pie-sector:hover {
+          filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.8)) brightness(1.2) !important;
+        }
+        .recharts-area-area {
+          filter: drop-shadow(0 15px 25px rgba(99, 102, 241, 0.3));
+        }
+      `}</style>
 
       {/* -------------------- 1. CLIENT VIEWS -------------------- */}
       {userRole === "client" && (
@@ -884,10 +929,12 @@ export default function DashboardClient() {
                             type="monotone" 
                             dataKey="total" 
                             stroke="var(--primary)" 
-                            strokeWidth={3} 
+                            strokeWidth={4} 
                             fillOpacity={1} 
                             fill="url(#colorTotal)"
-                            activeDot={{ r: 6, strokeWidth: 0, fill: "var(--primary)", style: { filter: "drop-shadow(0 0 8px rgba(99,102,241,0.8))" } }}
+                            animationDuration={1500}
+                            animationEasing="ease-out"
+                            activeDot={{ r: 6, strokeWidth: 0, fill: "#fff", style: { filter: "drop-shadow(0 0 12px rgba(99,102,241,1))" } }}
                           />
                         </AreaChart>
                       </ResponsiveContainer>
@@ -913,14 +960,22 @@ export default function DashboardClient() {
                             itemStyle={{ fontWeight: "bold" }}
                             formatter={(value: any) => [`${value} reservas`, "Cantidad"]}
                           />
+                          <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" fill="#fff" style={{ fontSize: "38px", fontWeight: "900", filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.8))" }}>
+                            {getServicesChartData().reduce((acc, curr) => acc + curr.value, 0)}
+                          </text>
+                          <text x="50%" y="56%" textAnchor="middle" dominantBaseline="middle" fill="var(--text-muted)" style={{ fontSize: "11px", fontWeight: "bold", letterSpacing: "1.5px", textTransform: "uppercase" }}>
+                            Reservas
+                          </text>
                           <Pie
                             data={getServicesChartData()}
-                            innerRadius={75}
-                            outerRadius={110}
-                            paddingAngle={6}
+                            innerRadius={80}
+                            outerRadius={115}
+                            paddingAngle={8}
                             dataKey="value"
                             stroke="none"
-                            cornerRadius={6}
+                            cornerRadius={8}
+                            animationDuration={1500}
+                            animationEasing="ease-out"
                           >
                             {getServicesChartData().map((entry, index) => {
                               const colors = ["#6366f1", "#a855f7", "#ec4899", "#14b8a6", "#f59e0b", "#3b82f6"];
