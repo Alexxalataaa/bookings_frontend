@@ -971,3 +971,14 @@ html[data-brightness="light"] .mobile-toggle {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.4);
 }
+
+/* Global Fixes for native selects to ensure dark mode visibility */
+select, select.select, select.input-field, .input {
+  background-color: var(--surface) !important;
+  color: var(--text) !important;
+}
+
+select option {
+  background-color: #0b0d11 !important;
+  color: #f8fafc !important;
+}

@@ -652,18 +652,20 @@ export default function BookingsClient() {
                   onChange={(e) => updateCreateForm("time", e.target.value)}
                   required
                 />
-                <select
-                  className="select"
-                  style={{ background: "#0f1116", color: "var(--text)" }}
-                  value={createForm.status}
-                  onChange={(e) =>
-                    updateCreateForm("status", e.target.value as BookingStatus)
-                  }
-                >
-                  <option style={{ background: "#0f1116", color: "var(--text)" }} value="pending">Pendiente</option>
-                  <option style={{ background: "#0f1116", color: "var(--text)" }} value="confirmed">Confirmada</option>
-                  <option style={{ background: "#0f1116", color: "var(--text)" }} value="paid">Pagada</option>
-                </select>
+                {userRole !== "client" && (
+                  <select
+                    className="select"
+                    style={{ background: "#0f1116", color: "var(--text)" }}
+                    value={createForm.status}
+                    onChange={(e) =>
+                      updateCreateForm("status", e.target.value as BookingStatus)
+                    }
+                  >
+                    <option style={{ background: "#0f1116", color: "var(--text)" }} value="pending">Pendiente</option>
+                    <option style={{ background: "#0f1116", color: "var(--text)" }} value="confirmed">Confirmada</option>
+                    <option style={{ background: "#0f1116", color: "var(--text)" }} value="paid">Pagada</option>
+                  </select>
+                )}
                 
                 {userRole !== "client" && (
                   <select
@@ -724,14 +726,20 @@ export default function BookingsClient() {
                     </ul>
                   )}
                 </div>
-                <input
-                  className="input"
-                  type="text"
+                <select
+                  className="select"
+                  style={{ background: "#0f1116", color: "var(--text)" }}
                   value={createForm.serviceName}
                   onChange={(e) => updateCreateForm("serviceName", e.target.value)}
-                  placeholder="Nombre del Servicio"
                   required
-                />
+                >
+                  <option style={{ background: "#0f1116", color: "var(--text)" }} value="" disabled>Selecciona un servicio</option>
+                  {allBusinesses.find(b => b.id === createForm.businessId)?.services?.map(s => (
+                    <option style={{ background: "#0f1116", color: "var(--text)" }} key={s.id} value={s.name}>
+                      {s.name} ({s.price}€)
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {errorMessage && <div className="message-error">{errorMessage}</div>}
@@ -776,18 +784,20 @@ export default function BookingsClient() {
                   onChange={(e) => updateEditForm("time", e.target.value)}
                   required
                 />
-                <select
-                  className="select"
-                  style={{ background: "#0f1116", color: "var(--text)" }}
-                  value={editForm.status}
-                  onChange={(e) =>
-                    updateEditForm("status", e.target.value as BookingStatus)
-                  }
-                >
-                  <option style={{ background: "#0f1116", color: "var(--text)" }} value="pending">Pendiente</option>
-                  <option style={{ background: "#0f1116", color: "var(--text)" }} value="confirmed">Confirmada</option>
-                  <option style={{ background: "#0f1116", color: "var(--text)" }} value="paid">Pagada</option>
-                </select>
+                {userRole !== "client" && (
+                  <select
+                    className="select"
+                    style={{ background: "#0f1116", color: "var(--text)" }}
+                    value={editForm.status}
+                    onChange={(e) =>
+                      updateEditForm("status", e.target.value as BookingStatus)
+                    }
+                  >
+                    <option style={{ background: "#0f1116", color: "var(--text)" }} value="pending">Pendiente</option>
+                    <option style={{ background: "#0f1116", color: "var(--text)" }} value="confirmed">Confirmada</option>
+                    <option style={{ background: "#0f1116", color: "var(--text)" }} value="paid">Pagada</option>
+                  </select>
+                )}
 
                 {userRole !== "client" && (
                   <select
@@ -848,14 +858,20 @@ export default function BookingsClient() {
                     </ul>
                   )}
                 </div>
-                <input
-                  className="input"
-                  type="text"
+                <select
+                  className="select"
+                  style={{ background: "#0f1116", color: "var(--text)" }}
                   value={editForm.serviceName}
                   onChange={(e) => updateEditForm("serviceName", e.target.value)}
-                  placeholder="Nombre del Servicio"
                   required
-                />
+                >
+                  <option style={{ background: "#0f1116", color: "var(--text)" }} value="" disabled>Selecciona un servicio</option>
+                  {allBusinesses.find(b => b.id === editForm.businessId)?.services?.map(s => (
+                    <option style={{ background: "#0f1116", color: "var(--text)" }} key={s.id} value={s.name}>
+                      {s.name} ({s.price}€)
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {errorMessage && <div className="message-error">{errorMessage}</div>}
