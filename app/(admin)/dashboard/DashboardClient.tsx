@@ -50,7 +50,9 @@ import {
   Settings,
   Building,
   DollarSign,
-  Briefcase
+  Briefcase,
+  Eye,
+  ArrowLeft
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -63,8 +65,10 @@ export default function DashboardClient() {
 
   // Auth state
   const [userRole, setUserRole] = useState<"client" | "business" | "superadmin">("business");
+  const [viewMode, setViewMode] = useState<"real" | "clientPreview">("real");
   const [userName, setUserName] = useState("Usuario Premium");
   const [loading, setLoading] = useState(true);
+  const effectiveRole = viewMode === "clientPreview" ? "client" : userRole;
 
   // Business Owner States
   const [ownedBusinesses, setOwnedBusinesses] = useState<Business[]>([]);
@@ -313,6 +317,21 @@ export default function DashboardClient() {
     localStorage.removeItem("user_role");
     localStorage.removeItem("user_name");
     window.location.href = "/login";
+  };
+
+  const handleEnterClientView = async () => {
+    if (viewMode === "clientPreview") return;
+    setViewMode("clientPreview");
+    if (allBusinesses.length === 0) {
+      await loadDashboardData("client");
+    }
+  };
+
+  const handleReturnToAdminView = async () => {
+    setViewMode("real");
+    if (userRole === "superadmin" && superadminBusinesses.length === 0) {
+      await loadDashboardData("superadmin");
+    }
   };
 
   // Create Business
@@ -634,7 +653,7 @@ export default function DashboardClient() {
       `}</style>
 
       {/* -------------------- 1. CLIENT VIEWS -------------------- */}
-      {userRole === "client" && (
+      {effectiveRole === "client" && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="page-stack">
 
           <section className="page-hero" style={{ background: "linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.04) 100%)", border: "1px solid rgba(99, 102, 241, 0.2)" }}>
@@ -648,6 +667,21 @@ export default function DashboardClient() {
               <p style={{ color: "var(--text-muted)", fontSize: "16px", marginTop: "12px" }}>
                 Agenda de forma dinámica, visualiza disponibilidad en tiempo real y gestiona tus reservas desde tu panel prémium.
               </p>
+
+              {userRole === "superadmin" && viewMode === "clientPreview" && (
+                <div style={{ marginTop: "24px", padding: "16px", borderRadius: "16px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(99, 102, 241, 0.12)", display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center" }}>
+                  <span style={{ color: "var(--primary)", fontWeight: 700 }}>Modo Vista Cliente</span>
+                  <span style={{ color: "var(--text-muted)", flex: 1, minWidth: "220px" }}>Estás viendo la aplicación como cliente, preservando tu acceso como superadmin.</span>
+                  <button
+                    className="secondary-btn"
+                    onClick={handleReturnToAdminView}
+                    style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "10px 16px" }}
+                  >
+                    <ArrowLeft size={16} />
+                    Volver a vista admin
+                  </button>
+                </div>
+              )}
             </div>
           </section>
 
@@ -743,7 +777,7 @@ export default function DashboardClient() {
       )}
 
       {/* -------------------- 2. BUSINESS VIEWS (OWNER DASHBOARD) -------------------- */}
-      {userRole === "business" && (
+      {effectiveRole === "business" && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="page-stack">
 
           {/* Header Switcher & Create Business Button */}
@@ -1274,7 +1308,7 @@ export default function DashboardClient() {
       )}
 
       {/* -------------------- 3. SUPERADMIN VIEWS -------------------- */}
-      {userRole === "superadmin" && (
+      {userRole === "superadmin" && viewMode === "real" && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="page-stack">
 
           <section className="page-hero" style={{ background: "linear-gradient(135deg, rgba(244, 63, 94, 0.08) 0%, rgba(99, 102, 241, 0.04) 100%)", border: "1px solid rgba(255, 255, 255, 0.05)" }}>
@@ -1284,6 +1318,17 @@ export default function DashboardClient() {
               </div>
               <h2>Consola de Superadministrador</h2>
               <p>Gestión global de negocios, auditorías técnicas, seguridad y métricas financieras.</p>
+              <div style={{ marginTop: "20px", display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ color: "var(--text-muted)", fontSize: "14px" }}>Visualiza el panel como un cliente real sin salir del modo superadmin.</span>
+                <button
+                  className="secondary-btn"
+                  onClick={handleEnterClientView}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "10px 16px" }}
+                >
+                  <Eye size={16} />
+                  Vista Cliente
+                </button>
+              </div>
             </div>
           </section>
 
