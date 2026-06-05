@@ -422,6 +422,23 @@ export default function BookingsClient() {
   const [editingBookingId, setEditingBookingId] = useState<number | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
 
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const renderSortIndicator = (column: string) => {
+    if (sortColumn !== column) return <span style={{ opacity: 0.3, marginLeft: 4, fontSize: '10px' }}>↕</span>;
+    return <span style={{ color: "var(--primary)", marginLeft: 4, fontSize: '12px' }}>{sortDirection === 'asc' ? '↑' : '↓'}</span>;
+  };
+
   const filteredBookings = useMemo(() => {
     let result = bookings;
     if (statusFilter !== "all") {
@@ -441,6 +458,32 @@ export default function BookingsClient() {
     }
     return result;
   }, [bookings, statusFilter, search, customersMap]);
+
+  const sortedBookings = useMemo(() => {
+    if (!sortColumn) return filteredBookings;
+    return [...filteredBookings].sort((a, b) => {
+      let aVal: any = a[sortColumn as keyof Booking];
+      let bVal: any = b[sortColumn as keyof Booking];
+
+      if (sortColumn === 'clientName') {
+         const aCust = customersMap[a.customerId];
+         const bCust = customersMap[b.customerId];
+         aVal = aCust ? aCust.name : '';
+         bVal = bCust ? bCust.name : '';
+      }
+      if (sortColumn === 'date') {
+         aVal = new Date(`${a.date}T${a.time}`).getTime();
+         bVal = new Date(`${b.date}T${b.time}`).getTime();
+      }
+
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredBookings, sortColumn, sortDirection, customersMap]);
 
   const totalCount = bookings.length;
   const pendingCount = bookings.filter((b) => b.status === "pending").length;
@@ -1108,16 +1151,16 @@ export default function BookingsClient() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Fecha / Hora</th>
-                <th>Servicio</th>
-                <th>Cliente / Negocio</th>
-                <th>Estado</th>
+                <th onClick={() => handleSort('id')} style={{ cursor: 'pointer' }}>ID {renderSortIndicator('id')}</th>
+                <th onClick={() => handleSort('date')} style={{ cursor: 'pointer' }}>Fecha / Hora {renderSortIndicator('date')}</th>
+                <th onClick={() => handleSort('serviceName')} style={{ cursor: 'pointer' }}>Servicio {renderSortIndicator('serviceName')}</th>
+                <th onClick={() => handleSort('clientName')} style={{ cursor: 'pointer' }}>Cliente / Negocio {renderSortIndicator('clientName')}</th>
+                <th onClick={() => handleSort('status')} style={{ cursor: 'pointer' }}>Estado {renderSortIndicator('status')}</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {filteredBookings.map((booking) => (
+              {sortedBookings.map((booking) => (
                 <motion.tr layout key={booking.id}>
                   <td style={{ fontWeight: 700, color: "var(--primary)" }}>#{booking.id}</td>
                   <td>

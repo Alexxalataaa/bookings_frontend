@@ -110,6 +110,84 @@ export default function DashboardClient() {
     );
   }, [businessBookings, businessBookingSearch]);
 
+  const [sortBookingsCol, setSortBookingsCol] = useState<string | null>(null);
+  const [sortBookingsDir, setSortBookingsDir] = useState<'asc' | 'desc'>('asc');
+
+  const handleSortBookings = (column: string) => {
+    if (sortBookingsCol === column) {
+      setSortBookingsDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBookingsCol(column);
+      setSortBookingsDir('asc');
+    }
+  };
+
+  const renderSortIndicatorBookings = (column: string) => {
+    if (sortBookingsCol !== column) return <span style={{ opacity: 0.3, marginLeft: 4, fontSize: '10px' }}>↕</span>;
+    return <span style={{ color: "var(--primary)", marginLeft: 4, fontSize: '12px' }}>{sortBookingsDir === 'asc' ? '↑' : '↓'}</span>;
+  };
+
+  const sortedBusinessBookings = useMemo(() => {
+    if (!sortBookingsCol) return filteredBusinessBookings;
+    return [...filteredBusinessBookings].sort((a, b) => {
+      let aVal: any = a[sortBookingsCol as keyof Booking];
+      let bVal: any = b[sortBookingsCol as keyof Booking];
+
+      if (sortBookingsCol === 'clientName') {
+         aVal = a.user?.fullName || '';
+         bVal = b.user?.fullName || '';
+      }
+      if (sortBookingsCol === 'date') {
+         aVal = new Date(`${a.date}T${a.time}`).getTime();
+         bVal = new Date(`${b.date}T${b.time}`).getTime();
+      }
+
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+
+      if (aVal < bVal) return sortBookingsDir === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortBookingsDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredBusinessBookings, sortBookingsCol, sortBookingsDir]);
+
+  const [sortBusinessesCol, setSortBusinessesCol] = useState<string | null>(null);
+  const [sortBusinessesDir, setSortBusinessesDir] = useState<'asc' | 'desc'>('asc');
+
+  const handleSortBusinesses = (column: string) => {
+    if (sortBusinessesCol === column) {
+      setSortBusinessesDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBusinessesCol(column);
+      setSortBusinessesDir('asc');
+    }
+  };
+
+  const renderSortIndicatorBusinesses = (column: string) => {
+    if (sortBusinessesCol !== column) return <span style={{ opacity: 0.3, marginLeft: 4, fontSize: '10px' }}>↕</span>;
+    return <span style={{ color: "var(--primary)", marginLeft: 4, fontSize: '12px' }}>{sortBusinessesDir === 'asc' ? '↑' : '↓'}</span>;
+  };
+
+  const sortedSuperadminBusinesses = useMemo(() => {
+    if (!sortBusinessesCol) return filteredSuperadminBusinesses;
+    return [...filteredSuperadminBusinesses].sort((a, b) => {
+      let aVal: any = a[sortBusinessesCol as keyof Business];
+      let bVal: any = b[sortBusinessesCol as keyof Business];
+
+      if (sortBusinessesCol === 'owner') {
+         aVal = a.owner?.fullName || '';
+         bVal = b.owner?.fullName || '';
+      }
+
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+
+      if (aVal < bVal) return sortBusinessesDir === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortBusinessesDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredSuperadminBusinesses, sortBusinessesCol, sortBusinessesDir]);
+
   // Create Business form state
   const [showCreateBiz, setShowCreateBiz] = useState(false);
   const [newBizName, setNewBizName] = useState("");
@@ -985,7 +1063,7 @@ export default function DashboardClient() {
                               color: "#fff"
                             }}
                             itemStyle={{ fontWeight: "bold" }}
-                            formatter={(value: any) => [`${value} reservas`, "Cantidad"]}
+                            formatter={(value: any, name: string) => [`${value} reservas`, name]}
                           />
                           <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" fill="var(--text)" style={{ fontSize: "38px", fontWeight: "900" }}>
                             {getServicesChartData().reduce((acc, curr) => acc + curr.value, 0)}
@@ -1115,17 +1193,17 @@ export default function DashboardClient() {
                       <table className="data-table">
                         <thead>
                           <tr>
-                            <th>Cliente</th>
-                            <th>Servicio</th>
-                            <th>Fecha / Hora</th>
-                            <th>Precio</th>
-                            <th>Estado</th>
+                            <th onClick={() => handleSortBookings('clientName')} style={{ cursor: 'pointer' }}>Cliente {renderSortIndicatorBookings('clientName')}</th>
+                            <th onClick={() => handleSortBookings('serviceName')} style={{ cursor: 'pointer' }}>Servicio {renderSortIndicatorBookings('serviceName')}</th>
+                            <th onClick={() => handleSortBookings('date')} style={{ cursor: 'pointer' }}>Fecha / Hora {renderSortIndicatorBookings('date')}</th>
+                            <th onClick={() => handleSortBookings('price')} style={{ cursor: 'pointer' }}>Precio {renderSortIndicatorBookings('price')}</th>
+                            <th onClick={() => handleSortBookings('status')} style={{ cursor: 'pointer' }}>Estado {renderSortIndicatorBookings('status')}</th>
                             <th style={{ textAlign: "right" }}>Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredBusinessBookings.length > 0 ? (
-                            filteredBusinessBookings.map(b => (
+                          {sortedBusinessBookings.length > 0 ? (
+                            sortedBusinessBookings.map(b => (
                               <tr key={b.id}>
                                 <td style={{ fontWeight: "bold" }}>{b.user?.fullName || `Cliente #${b.customerId}`}</td>
                                 <td>{b.serviceName}</td>
@@ -1254,16 +1332,16 @@ export default function DashboardClient() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Negocio</th>
-                    <th>Categoría</th>
-                    <th>Ubicación</th>
-                    <th>Propietario</th>
-                    <th>Estado de Cuenta</th>
+                    <th onClick={() => handleSortBusinesses('name')} style={{ cursor: 'pointer' }}>Negocio {renderSortIndicatorBusinesses('name')}</th>
+                    <th onClick={() => handleSortBusinesses('category')} style={{ cursor: 'pointer' }}>Categoría {renderSortIndicatorBusinesses('category')}</th>
+                    <th onClick={() => handleSortBusinesses('city')} style={{ cursor: 'pointer' }}>Ubicación {renderSortIndicatorBusinesses('city')}</th>
+                    <th onClick={() => handleSortBusinesses('owner')} style={{ cursor: 'pointer' }}>Propietario {renderSortIndicatorBusinesses('owner')}</th>
+                    <th onClick={() => handleSortBusinesses('status')} style={{ cursor: 'pointer' }}>Estado de Cuenta {renderSortIndicatorBusinesses('status')}</th>
                     <th style={{ textAlign: "right" }}>Acciones Administrativas</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredSuperadminBusinesses.map(b => (
+                  {sortedSuperadminBusinesses.map(b => (
                     <tr key={b.id}>
                       <td style={{ fontWeight: "bold" }}>{b.name}</td>
                       <td>{b.category}</td>

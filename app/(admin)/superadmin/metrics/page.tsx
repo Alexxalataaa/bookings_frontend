@@ -10,6 +10,40 @@ export default function MetricsPage() {
   const [logs, setLogs] = useState<SystemLog[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const renderSortIndicator = (column: string) => {
+    if (sortColumn !== column) return <span style={{ opacity: 0.3, marginLeft: 4, fontSize: '10px' }}>↕</span>;
+    return <span style={{ color: "var(--primary)", marginLeft: 4, fontSize: '12px' }}>{sortDirection === 'asc' ? '↑' : '↓'}</span>;
+  };
+
+  const sortedLogs = [...logs].sort((a, b) => {
+    if (!sortColumn) return 0;
+    let aVal: any = a[sortColumn as keyof SystemLog];
+    let bVal: any = b[sortColumn as keyof SystemLog];
+
+    if (sortColumn === 'timestamp') {
+      aVal = new Date(a.createdAt).getTime();
+      bVal = new Date(b.createdAt).getTime();
+    }
+    if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+    if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+
+    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -97,19 +131,19 @@ export default function MetricsPage() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Fecha/Hora</th>
-                  <th>Acción</th>
-                  <th>Entidad</th>
-                  <th>ID Entidad</th>
-                  <th>ID Usuario</th>
-                  <th>Detalles</th>
+                  <th onClick={() => handleSort('timestamp')} style={{ cursor: 'pointer' }}>Fecha/Hora {renderSortIndicator('timestamp')}</th>
+                  <th onClick={() => handleSort('action')} style={{ cursor: 'pointer' }}>Acción {renderSortIndicator('action')}</th>
+                  <th onClick={() => handleSort('entityName')} style={{ cursor: 'pointer' }}>Entidad {renderSortIndicator('entityName')}</th>
+                  <th onClick={() => handleSort('entityId')} style={{ cursor: 'pointer' }}>ID Entidad {renderSortIndicator('entityId')}</th>
+                  <th onClick={() => handleSort('userId')} style={{ cursor: 'pointer' }}>ID Usuario {renderSortIndicator('userId')}</th>
+                  <th onClick={() => handleSort('details')} style={{ cursor: 'pointer' }}>Detalles {renderSortIndicator('details')}</th>
                 </tr>
               </thead>
               <tbody>
-                {logs.length === 0 ? (
+                {sortedLogs.length === 0 ? (
                   <tr><td colSpan={6} style={{textAlign: "center"}}>No hay logs registrados</td></tr>
                 ) : (
-                  logs.map(log => (
+                  sortedLogs.map(log => (
                     <tr key={log.id}>
                       <td style={{ fontSize: "12px", color: "var(--text-muted)" }}>{new Date(log.createdAt).toLocaleString()}</td>
                       <td><span className="badge badge--confirmed">{log.action}</span></td>

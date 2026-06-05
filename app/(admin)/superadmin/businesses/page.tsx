@@ -13,6 +13,23 @@ export default function BusinessesPage() {
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
   const [errorModal, setErrorModal] = useState<string | null>(null);
 
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const renderSortIndicator = (column: string) => {
+    if (sortColumn !== column) return <span style={{ opacity: 0.3, marginLeft: 4, fontSize: '10px' }}>↕</span>;
+    return <span style={{ color: "var(--primary)", marginLeft: 4, fontSize: '12px' }}>{sortDirection === 'asc' ? '↑' : '↓'}</span>;
+  };
+
   useEffect(() => {
     fetchBusinesses();
   }, []);
@@ -71,6 +88,30 @@ export default function BusinessesPage() {
     );
   }, [businesses, search]);
 
+  const sortedBusinesses = useMemo(() => {
+    if (!sortColumn) return filteredBusinesses;
+    return [...filteredBusinesses].sort((a, b) => {
+      let aVal: any = a[sortColumn as keyof Business];
+      let bVal: any = b[sortColumn as keyof Business];
+      
+      if (sortColumn === 'owner') {
+         aVal = a.owner?.username || '';
+         bVal = b.owner?.username || '';
+      }
+      if (sortColumn === 'status') {
+         aVal = a.isSuspended ? 'SUSPENDIDO' : 'ACTIVO';
+         bVal = b.isSuspended ? 'SUSPENDIDO' : 'ACTIVO';
+      }
+
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredBusinesses, sortColumn, sortDirection]);
+
   if (loading) {
     return (
       <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
@@ -108,21 +149,21 @@ export default function BusinessesPage() {
         <table className="data-table">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Categoría</th>
-              <th>Propietario</th>
-              <th>Estado</th>
+              <th onClick={() => handleSort('id')} style={{ cursor: 'pointer' }}>ID {renderSortIndicator('id')}</th>
+              <th onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>Nombre {renderSortIndicator('name')}</th>
+              <th onClick={() => handleSort('category')} style={{ cursor: 'pointer' }}>Categoría {renderSortIndicator('category')}</th>
+              <th onClick={() => handleSort('owner')} style={{ cursor: 'pointer' }}>Propietario {renderSortIndicator('owner')}</th>
+              <th onClick={() => handleSort('status')} style={{ cursor: 'pointer' }}>Estado {renderSortIndicator('status')}</th>
               <th style={{ textAlign: "right" }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {filteredBusinesses.length === 0 ? (
+            {sortedBusinesses.length === 0 ? (
               <tr>
                 <td colSpan={6} style={{ textAlign: "center", padding: "20px" }}>No se encontraron negocios.</td>
               </tr>
             ) : (
-              filteredBusinesses.map(b => (
+              sortedBusinesses.map(b => (
                 <tr key={b.id} style={{ opacity: b.isSuspended ? 0.65 : 1, background: b.isSuspended ? "rgba(244, 63, 94, 0.02)" : "transparent" }}>
                   <td>#{b.id}</td>
                   <td style={{ fontWeight: 600, textDecoration: b.isSuspended ? "line-through" : "none" }}>{b.name}</td>

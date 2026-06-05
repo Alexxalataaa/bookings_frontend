@@ -123,6 +123,44 @@ export default function PaymentsClient() {
       p.method.toLowerCase().includes(lower)
     );
   }, [payments, search]);
+
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const renderSortIndicator = (column: string) => {
+    if (sortColumn !== column) return <span style={{ opacity: 0.3, marginLeft: 4, fontSize: '10px' }}>↕</span>;
+    return <span style={{ color: "var(--primary)", marginLeft: 4, fontSize: '12px' }}>{sortDirection === 'asc' ? '↑' : '↓'}</span>;
+  };
+
+  const sortedPayments = useMemo(() => {
+    if (!sortColumn) return filteredPayments;
+    return [...filteredPayments].sort((a, b) => {
+      let aVal: any = a[sortColumn as keyof Payment];
+      let bVal: any = b[sortColumn as keyof Payment];
+
+      if (sortColumn === 'date') {
+         aVal = new Date(a.date).getTime();
+         bVal = new Date(b.date).getTime();
+      }
+
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredPayments, sortColumn, sortDirection]);
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const formRef = useRef<HTMLElement>(null);
 
@@ -464,54 +502,54 @@ export default function PaymentsClient() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Cliente / Comercio</th>
-                <th>Importe</th>
-                <th>Método</th>
-                <th>Fecha</th>
-                <th>Estado</th>
+                <th onClick={() => handleSort('id')} style={{ cursor: 'pointer' }}>ID {renderSortIndicator('id')}</th>
+                <th onClick={() => handleSort('clientName')} style={{ cursor: 'pointer' }}>Cliente / Comercio {renderSortIndicator('clientName')}</th>
+                <th onClick={() => handleSort('amount')} style={{ cursor: 'pointer' }}>Importe {renderSortIndicator('amount')}</th>
+                <th onClick={() => handleSort('method')} style={{ cursor: 'pointer' }}>Método {renderSortIndicator('method')}</th>
+                <th onClick={() => handleSort('date')} style={{ cursor: 'pointer' }}>Fecha {renderSortIndicator('date')}</th>
+                <th onClick={() => handleSort('status')} style={{ cursor: 'pointer' }}>Estado {renderSortIndicator('status')}</th>
                 <th style={{ textAlign: "right" }}>Acción</th>
               </tr>
             </thead>
             <tbody>
-              {filteredPayments.length === 0 ? (
+              {sortedPayments.length === 0 ? (
                 <tr>
                   <td colSpan={7} style={{ textAlign: "center", padding: "20px" }}>No se encontraron cobros.</td>
                 </tr>
               ) : (
-                filteredPayments.map((payment) => (
-                <motion.tr layout key={payment.id}>
-                  <td style={{ fontWeight: 700, color: "var(--text-muted)" }}>#{payment.id}</td>
+                sortedPayments.map((p) => (
+                <motion.tr layout key={p.id} style={{ opacity: p.status === "paid" ? 0.9 : 1 }}>
+                  <td style={{ fontWeight: 700, color: "var(--text-muted)" }}>#{p.id}</td>
                   <td>
                     <div style={{ display: "flex", flexDirection: "column" }}>
-                      <span style={{ fontWeight: 600 }}>{payment.clientName}</span>
-                      <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{payment.businessName}</span>
+                      <span style={{ fontWeight: 600 }}>{p.clientName}</span>
+                      <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{p.businessName}</span>
                     </div>
                   </td>
-                  <td style={{ fontWeight: 700, fontSize: "16px" }}>{formatCurrency(Number(payment.amount))}</td>
+                  <td style={{ fontWeight: 700, fontSize: "16px" }}>{formatCurrency(Number(p.amount))}</td>
                   <td>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--text-muted)" }}>
-                      <MethodIcon method={payment.method} />
-                      <span style={{ fontSize: "14px" }}>{payment.method}</span>
+                      <MethodIcon method={p.method} />
+                      <span style={{ fontSize: "14px" }}>{p.method}</span>
                     </div>
                   </td>
-                  <td style={{ fontSize: "14px", color: "var(--text-muted)" }}>{payment.date}</td>
+                  <td style={{ fontSize: "14px", color: "var(--text-muted)" }}>{p.date}</td>
                   <td>
-                    <Badge status={payment.status} />
+                    <Badge status={p.status} />
                   </td>
                   <td style={{ textAlign: "right" }}>
                      <button 
-                      onClick={() => handleStatusToggle(payment)} 
+                      onClick={() => handleStatusToggle(p)} 
                       className="secondary-btn" 
                       style={{ 
                         padding: "8px 14px", 
                         fontSize: "12px",
-                        borderColor: payment.status === "pending" ? "var(--success)" : "var(--border)",
-                        color: payment.status === "pending" ? "var(--success)" : "var(--text-muted)"
+                        borderColor: p.status === "pending" ? "var(--success)" : "var(--border)",
+                        color: p.status === "pending" ? "var(--success)" : "var(--text-muted)"
                       }}
                     >
                       <ArrowRight size={14} style={{ marginRight: "6px" }} />
-                      Marcar como {payment.status === "pending" ? "Pagado" : "Pendiente"}
+                      Marcar como {p.status === "pending" ? "Pagado" : "Pendiente"}
                     </button>
                   </td>
                 </motion.tr>

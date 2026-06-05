@@ -12,6 +12,23 @@ export default function AccountsPage() {
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
 
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const renderSortIndicator = (column: string) => {
+    if (sortColumn !== column) return <span style={{ opacity: 0.3, marginLeft: 4, fontSize: '10px' }}>↕</span>;
+    return <span style={{ color: "var(--primary)", marginLeft: 4, fontSize: '12px' }}>{sortDirection === 'asc' ? '↑' : '↓'}</span>;
+  };
+
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -57,6 +74,21 @@ export default function AccountsPage() {
     );
   }, [users, search]);
 
+  const sortedUsers = useMemo(() => {
+    if (!sortColumn) return filteredUsers;
+    return [...filteredUsers].sort((a, b) => {
+      let aVal = a[sortColumn as keyof SystemUser];
+      let bVal = b[sortColumn as keyof SystemUser];
+      
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredUsers, sortColumn, sortDirection]);
+
   if (loading) {
     return (
       <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
@@ -94,21 +126,21 @@ export default function AccountsPage() {
         <table className="data-table">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Usuario</th>
-              <th>Email</th>
-              <th>Rol</th>
+              <th onClick={() => handleSort('id')} style={{ cursor: 'pointer' }}>ID {renderSortIndicator('id')}</th>
+              <th onClick={() => handleSort('fullName')} style={{ cursor: 'pointer' }}>Nombre {renderSortIndicator('fullName')}</th>
+              <th onClick={() => handleSort('username')} style={{ cursor: 'pointer' }}>Usuario {renderSortIndicator('username')}</th>
+              <th onClick={() => handleSort('email')} style={{ cursor: 'pointer' }}>Email {renderSortIndicator('email')}</th>
+              <th onClick={() => handleSort('role')} style={{ cursor: 'pointer' }}>Rol {renderSortIndicator('role')}</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.length === 0 ? (
+            {sortedUsers.length === 0 ? (
               <tr>
                 <td colSpan={6} style={{ textAlign: "center", padding: "20px" }}>No se encontraron usuarios.</td>
               </tr>
             ) : (
-              filteredUsers.map(u => (
+              sortedUsers.map(u => (
                 <tr key={u.id}>
                   <td>#{u.id}</td>
                   <td style={{ fontWeight: 600 }}>{u.fullName}</td>
