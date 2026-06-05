@@ -979,6 +979,6 @@ select, select.select, select.input-field, .input {
 }
 
 select option {
-  background-color: #0b0d11 !important;
-  color: #f8fafc !important;
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
 }

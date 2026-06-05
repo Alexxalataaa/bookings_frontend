@@ -112,7 +112,7 @@ function CalendarView({
   const statusColor: Record<string, string> = {
     pending: "#f59e0b",
     confirmed: "#6366f1",
-    paid: "#22c55e",
+    paid: "#3b82f6",
   };
 
   const cells: (number | null)[] = [];
@@ -212,7 +212,7 @@ function CalendarView({
           {[
             { color: "#f59e0b", label: "Pendiente" },
             { color: "#6366f1", label: "Confirmada" },
-            { color: "#22c55e", label: "Pagada" },
+            { color: "#3b82f6", label: "Pagada" },
           ].map(({ color, label }) => (
             <div key={label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-muted)" }}>
               <div style={{ width: 10, height: 10, borderRadius: "50%", background: color }} />
@@ -729,29 +729,27 @@ export default function BookingsClient() {
                 {userRole !== "client" && (
                   <select
                     className="select"
-                    style={{ background: "#0f1116", color: "var(--text)" }}
                     value={createForm.status}
                     onChange={(e) =>
                       updateCreateForm("status", e.target.value as BookingStatus)
                     }
                   >
-                    <option style={{ background: "#0f1116", color: "var(--text)" }} value="pending">Pendiente</option>
-                    <option style={{ background: "#0f1116", color: "var(--text)" }} value="confirmed">Confirmada</option>
-                    <option style={{ background: "#0f1116", color: "var(--text)" }} value="paid">Pagada</option>
+                    <option value="pending">Pendiente</option>
+                    <option value="confirmed">Confirmada</option>
+                    <option value="paid">Pagada</option>
                   </select>
                 )}
                 
                 {userRole !== "client" && (
                   <select
                     className="select"
-                    style={{ background: "#0f1116", color: "var(--text)" }}
                     value={createForm.customerId}
                     onChange={(e) => updateCreateForm("customerId", Number(e.target.value))}
                     required
                   >
-                    <option style={{ background: "#0f1116", color: "var(--text)" }} value="" disabled>Selecciona cliente</option>
+                    <option value="" disabled>Selecciona cliente</option>
                     {customers.map((c) => (
-                      <option style={{ background: "#0f1116", color: "var(--text)" }} key={c.id} value={c.id}>
+                      <option key={c.id} value={c.id}>
                         {c.name}
                       </option>
                     ))}
@@ -804,14 +802,13 @@ export default function BookingsClient() {
                 )}
                 <select
                   className="select"
-                  style={{ background: "#0f1116", color: "var(--text)" }}
                   value={createForm.serviceName}
                   onChange={(e) => updateCreateForm("serviceName", e.target.value)}
                   required
                 >
-                  <option style={{ background: "#0f1116", color: "var(--text)" }} value="" disabled>Selecciona un servicio</option>
+                  <option value="" disabled>Selecciona un servicio</option>
                   {allBusinesses.find(b => b.id === createForm.businessId)?.services?.map(s => (
-                    <option style={{ background: "#0f1116", color: "var(--text)" }} key={s.id} value={s.name}>
+                    <option key={s.id} value={s.name}>
                       {s.name} ({s.price}€)
                     </option>
                   ))}
@@ -868,29 +865,27 @@ export default function BookingsClient() {
                 {userRole !== "client" && (
                   <select
                     className="select"
-                    style={{ background: "#0f1116", color: "var(--text)" }}
                     value={editForm.status}
                     onChange={(e) =>
                       updateEditForm("status", e.target.value as BookingStatus)
                     }
                   >
-                    <option style={{ background: "#0f1116", color: "var(--text)" }} value="pending">Pendiente</option>
-                    <option style={{ background: "#0f1116", color: "var(--text)" }} value="confirmed">Confirmada</option>
-                    <option style={{ background: "#0f1116", color: "var(--text)" }} value="paid">Pagada</option>
+                    <option value="pending">Pendiente</option>
+                    <option value="confirmed">Confirmada</option>
+                    <option value="paid">Pagada</option>
                   </select>
                 )}
 
                 {userRole !== "client" && (
                   <select
                     className="select"
-                    style={{ background: "#0f1116", color: "var(--text)" }}
                     value={editForm.customerId}
                     onChange={(e) => updateEditForm("customerId", Number(e.target.value))}
                     required
                   >
-                    <option style={{ background: "#0f1116", color: "var(--text)" }} value="" disabled>Selecciona cliente</option>
+                    <option value="" disabled>Selecciona cliente</option>
                     {customers.map((c) => (
-                      <option style={{ background: "#0f1116", color: "var(--text)" }} key={c.id} value={c.id}>
+                      <option key={c.id} value={c.id}>
                         {c.name}
                       </option>
                     ))}
@@ -943,14 +938,13 @@ export default function BookingsClient() {
                 )}
                 <select
                   className="select"
-                  style={{ background: "#0f1116", color: "var(--text)" }}
                   value={editForm.serviceName}
                   onChange={(e) => updateEditForm("serviceName", e.target.value)}
                   required
                 >
-                  <option style={{ background: "#0f1116", color: "var(--text)" }} value="" disabled>Selecciona un servicio</option>
+                  <option value="" disabled>Selecciona un servicio</option>
                   {allBusinesses.find(b => b.id === editForm.businessId)?.services?.map(s => (
-                    <option style={{ background: "#0f1116", color: "var(--text)" }} key={s.id} value={s.name}>
+                    <option key={s.id} value={s.name}>
                       {s.name} ({s.price}€)
                     </option>
                   ))}

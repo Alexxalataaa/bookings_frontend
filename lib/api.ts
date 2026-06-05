@@ -218,26 +218,69 @@ export async function deleteService(id: number): Promise<void> {
   await authedFetch<void>(`${API_URL}/services/${id}`, { method: "DELETE" });
 }
 
+function normalizeBooking(b: Booking): Booking {
+  if (b && typeof b.status === "string") {
+    const s = b.status.toLowerCase();
+    if (s === "pagada" || s === "paid") {
+      b.status = "paid";
+    } else if (s === "pending" || s === "pendiente") {
+      b.status = "pending";
+    } else if (s === "confirmed" || s === "confirmada") {
+      b.status = "confirmed";
+    } else if (s === "cancelled" || s === "cancelada") {
+      b.status = "cancelled";
+    }
+  }
+  return b;
+}
+
 // --- APPOINTMENTS (RESERVATIONS) ---
 export async function getAppointments(businessId?: number): Promise<Booking[]> {
   const url = businessId ? `${API_URL}/appointments?businessId=${businessId}` : `${API_URL}/appointments`;
-  return authedFetch<Booking[]>(url, { cache: "no-store" });
+  const res = await authedFetch<Booking[]>(url, { cache: "no-store" });
+  return (res || []).map(normalizeBooking);
 }
 
 export async function createAppointment(data: CreateBookingDto): Promise<Booking> {
-  return authedFetch<Booking>(`${API_URL}/appointments`, {
+  if (data.status) {
+    const s = data.status.toLowerCase();
+    if (s === "pagada" || s === "paid") {
+      data.status = "paid";
+    } else if (s === "pending" || s === "pendiente") {
+      data.status = "pending";
+    } else if (s === "confirmed" || s === "confirmada") {
+      data.status = "confirmed";
+    } else if (s === "cancelled" || s === "cancelada") {
+      data.status = "cancelled";
+    }
+  }
+  const res = await authedFetch<Booking>(`${API_URL}/appointments`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
+  return normalizeBooking(res);
 }
 
 export async function updateAppointment(id: number, data: UpdateBookingDto): Promise<Booking> {
-  return authedFetch<Booking>(`${API_URL}/appointments/${id}`, {
+  if (data.status) {
+    const s = data.status.toLowerCase();
+    if (s === "pagada" || s === "paid") {
+      data.status = "paid";
+    } else if (s === "pending" || s === "pendiente") {
+      data.status = "pending";
+    } else if (s === "confirmed" || s === "confirmada") {
+      data.status = "confirmed";
+    } else if (s === "cancelled" || s === "cancelada") {
+      data.status = "cancelled";
+    }
+  }
+  const res = await authedFetch<Booking>(`${API_URL}/appointments/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
+  return normalizeBooking(res);
 }
 
 export async function deleteAppointment(id: number): Promise<{ message: string }> {

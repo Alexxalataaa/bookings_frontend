@@ -16,7 +16,8 @@ import {
   Banknote,
   Smartphone,
   Send,
-  Download
+  Download,
+  Search
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -97,13 +98,26 @@ const formatCurrency = (val: number) => new Intl.NumberFormat('es-ES', { style: 
 export default function PaymentsClient() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
+    setUserRole(localStorage.getItem("user_role"));
     getPayments()
       .then(setPayments)
       .catch((err) => console.error("Error fetching payments:", err))
       .finally(() => setInitialLoading(false));
   }, []);
+
+  const filteredPayments = useMemo(() => {
+    if (!search.trim()) return payments;
+    const lower = search.toLowerCase();
+    return payments.filter(p =>
+      p.clientName.toLowerCase().includes(lower) ||
+      p.businessName.toLowerCase().includes(lower) ||
+      p.method.toLowerCase().includes(lower)
+    );
+  }, [payments, search]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const formRef = useRef<HTMLElement>(null);
 
@@ -388,10 +402,23 @@ export default function PaymentsClient() {
       </AnimatePresence>
 
       <motion.section variants={item} className="section-card">
-        <div className="panel-title-row" style={{ marginBottom: 32 }}>
-          <h3 className="panel-title">Listado de Cobros</h3>
-          <div className="badge" style={{ background: "rgba(255,255,255,0.05)", textTransform: "none" }}>
-            {payments.length} operaciones registradas
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32, flexWrap: "wrap", gap: "16px" }}>
+          <div>
+            <h3 className="panel-title" style={{ margin: 0 }}>Listado de Cobros</h3>
+            <div className="badge" style={{ background: "rgba(255,255,255,0.05)", textTransform: "none", marginTop: "4px" }}>
+              {filteredPayments.length} operaciones encontradas
+            </div>
+          </div>
+          <div style={{ position: "relative", width: "300px" }}>
+            <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+            <input
+              type="text"
+              className="input"
+              placeholder="Buscar por cliente, comercio o método..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ paddingLeft: "36px", fontSize: "13px", height: "36px" }}
+            />
           </div>
         </div>
 
@@ -409,7 +436,12 @@ export default function PaymentsClient() {
               </tr>
             </thead>
             <tbody>
-              {payments.map((payment) => (
+              {filteredPayments.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: "center", padding: "20px" }}>No se encontraron cobros.</td>
+                </tr>
+              ) : (
+                filteredPayments.map((payment) => (
                 <motion.tr layout key={payment.id}>
                   <td style={{ fontWeight: 700, color: "var(--text-muted)" }}>#{payment.id}</td>
                   <td>
@@ -445,7 +477,8 @@ export default function PaymentsClient() {
                     </button>
                   </td>
                 </motion.tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
