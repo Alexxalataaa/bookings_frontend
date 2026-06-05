@@ -987,7 +987,7 @@ export default function DashboardClient() {
                             itemStyle={{ fontWeight: "bold" }}
                             formatter={(value: any) => [`${value} reservas`, "Cantidad"]}
                           />
-                          <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" fill="#fff" style={{ fontSize: "38px", fontWeight: "900", filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.8))" }}>
+                          <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" fill="var(--text)" style={{ fontSize: "38px", fontWeight: "900" }}>
                             {getServicesChartData().reduce((acc, curr) => acc + curr.value, 0)}
                           </text>
                           <text x="50%" y="56%" textAnchor="middle" dominantBaseline="middle" fill="var(--text-muted)" style={{ fontSize: "11px", fontWeight: "bold", letterSpacing: "1.5px", textTransform: "uppercase" }}>
