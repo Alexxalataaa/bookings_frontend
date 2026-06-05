@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   getBusinesses,
@@ -43,6 +43,7 @@ import {
   RefreshCw,
   LogOut,
   UserCheck,
+  AlertTriangle,
   CheckCircle,
   FileCode2,
   ChevronRight,
@@ -81,6 +82,33 @@ export default function DashboardClient() {
   // Superadmin view States
   const [superadminBusinesses, setSuperadminBusinesses] = useState<Business[]>([]);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  const [superadminSearch, setSuperadminSearch] = useState("");
+  const [businessBookingSearch, setBusinessBookingSearch] = useState("");
+  const [deleteServiceTarget, setDeleteServiceTarget] = useState<number | null>(null);
+  const [deleteBusinessTarget, setDeleteBusinessTarget] = useState<{ id: number; name: string } | null>(null);
+
+  const filteredSuperadminBusinesses = useMemo(() => {
+    if (!superadminSearch.trim()) return superadminBusinesses;
+    const lower = superadminSearch.toLowerCase();
+    return superadminBusinesses.filter(b => 
+      b.name.toLowerCase().includes(lower) ||
+      b.category.toLowerCase().includes(lower) ||
+      (b.city && b.city.toLowerCase().includes(lower)) ||
+      (b.owner?.fullName && b.owner.fullName.toLowerCase().includes(lower))
+    );
+  }, [superadminBusinesses, superadminSearch]);
+
+  const filteredBusinessBookings = useMemo(() => {
+    if (!businessBookingSearch.trim()) return businessBookings;
+    const lower = businessBookingSearch.toLowerCase();
+    return businessBookings.filter(b => 
+      b.serviceName.toLowerCase().includes(lower) ||
+      (b.user?.fullName && b.user.fullName.toLowerCase().includes(lower)) ||
+      (b.customerId && b.customerId.toString().includes(lower)) ||
+      b.status.toLowerCase().includes(lower) ||
+      b.date.includes(lower)
+    );
+  }, [businessBookings, businessBookingSearch]);
 
   // Create Business form state
   const [showCreateBiz, setShowCreateBiz] = useState(false);
@@ -326,16 +354,20 @@ export default function DashboardClient() {
     }
   };
 
-  const handleDeleteService = async (id: number) => {
-    if (!selectedBusiness) return;
-    if (!confirm("¿Seguro que deseas eliminar este servicio?")) return;
+  const handleDeleteServiceClick = (id: number) => {
+    setDeleteServiceTarget(id);
+  };
 
+  const confirmDeleteService = async () => {
+    if (deleteServiceTarget === null || !selectedBusiness) return;
     try {
-      await deleteService(id);
+      await deleteService(deleteServiceTarget);
       const services = await getServices(selectedBusiness.id);
       setBusinessServices(services);
     } catch (err) {
       console.error("Error deleting service:", err);
+    } finally {
+      setDeleteServiceTarget(null);
     }
   };
 
@@ -391,22 +423,25 @@ export default function DashboardClient() {
     }
   };
 
-  const handleDeleteBusinessSuper = async (businessId: number) => {
-    const target = superadminBusinesses.find(b => b.id === businessId);
-    if (!target) return;
-    if (!confirm(`¿Eliminar permanentemente ${target.name}?`)) return;
+  const handleDeleteBusinessSuperClick = (businessId: number, name: string) => {
+    setDeleteBusinessTarget({ id: businessId, name });
+  };
 
+  const confirmDeleteBusinessSuper = async () => {
+    if (!deleteBusinessTarget) return;
     try {
-      await deleteBusiness(businessId);
+      await deleteBusiness(deleteBusinessTarget.id);
       const list = await getBusinessesAll();
       setSuperadminBusinesses(list);
 
       setActivityLogs(prev => [
-        { id: Date.now(), timestamp: new Date().toTimeString().split(" ")[0], user: "admin", action: "Eliminar Negocio", details: `Eliminó permanentemente: ${target.name}` },
+        { id: Date.now(), timestamp: new Date().toTimeString().split(" ")[0], user: "admin", action: "Eliminar Negocio", details: `Eliminó permanentemente: ${deleteBusinessTarget.name}` },
         ...prev
       ]);
     } catch (err) {
       console.error(err);
+    } finally {
+      setDeleteBusinessTarget(null);
     }
   };
 
@@ -536,10 +571,6 @@ export default function DashboardClient() {
                 Agenda de forma dinámica, visualiza disponibilidad en tiempo real y gestiona tus reservas desde tu panel prémium.
               </p>
             </div>
-            <button className="primary-btn" onClick={() => handleDemoLogin("business")}>
-              <span>Ver Panel de Negocio</span>
-              <ChevronRight size={16} />
-            </button>
           </section>
 
           {/* Search bar & Filters */}
@@ -687,10 +718,6 @@ export default function DashboardClient() {
               >
                 <Plus size={16} />
                 <span>Registrar Negocio</span>
-              </button>
-
-              <button className="secondary-btn" onClick={() => handleDemoLogin("client")}>
-                <span>Vista Cliente</span>
               </button>
             </div>
 
@@ -1017,7 +1044,7 @@ export default function DashboardClient() {
                           </span>
                           <div style={{ display: "flex", gap: "8px", borderTop: "1px solid var(--border)", paddingTop: "8px", marginTop: "8px" }}>
                             <button onClick={() => handleEditServiceClick(s)} className="secondary-btn" style={{ padding: "6px 12px", fontSize: "11px", flex: 1, justifyContent: "center" }}>Editar</button>
-                            <button onClick={() => handleDeleteService(s.id)} className="danger-btn" style={{ padding: "6px 12px", fontSize: "11px", flex: 1, justifyContent: "center" }}>Eliminar</button>
+                            <button onClick={() => handleDeleteServiceClick(s.id)} className="danger-btn" style={{ padding: "6px 12px", fontSize: "11px", flex: 1, justifyContent: "center" }}>Eliminar</button>
                           </div>
                         </div>
                       ))}
@@ -1069,7 +1096,20 @@ export default function DashboardClient() {
 
                   {/* Bookings Management List */}
                   <section className="section-card">
-                    <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" }}>Gestión de Reservas ({businessBookings.length})</h3>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+                      <h3 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>Gestión de Reservas ({filteredBusinessBookings.length})</h3>
+                      <div style={{ position: "relative", width: "300px" }}>
+                        <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                        <input
+                          type="text"
+                          className="input"
+                          placeholder="Buscar por cliente, servicio o fecha..."
+                          value={businessBookingSearch}
+                          onChange={(e) => setBusinessBookingSearch(e.target.value)}
+                          style={{ paddingLeft: "36px", fontSize: "13px", height: "36px" }}
+                        />
+                      </div>
+                    </div>
 
                     <div className="table-scroll-wrapper">
                       <table className="data-table">
@@ -1084,8 +1124,8 @@ export default function DashboardClient() {
                           </tr>
                         </thead>
                         <tbody>
-                          {businessBookings.length > 0 ? (
-                            businessBookings.map(b => (
+                          {filteredBusinessBookings.length > 0 ? (
+                            filteredBusinessBookings.map(b => (
                               <tr key={b.id}>
                                 <td style={{ fontWeight: "bold" }}>{b.user?.fullName || `Cliente #${b.customerId}`}</td>
                                 <td>{b.serviceName}</td>
@@ -1123,7 +1163,7 @@ export default function DashboardClient() {
                                     <span style={{ fontSize: "12px", color: "var(--text-muted)", fontStyle: "italic" }}>Cancelada</span>
                                   )}
                                   {b.status === "paid" && (
-                                    <span style={{ fontSize: "12px", color: "var(--success)", fontWeight: "bold" }}>✓ Pagada</span>
+                                    <span style={{ fontSize: "12px", color: "var(--info)", fontWeight: "bold" }}>✓ Pagada</span>
                                   )}
                                 </td>
                               </tr>
@@ -1167,10 +1207,6 @@ export default function DashboardClient() {
               <h2>Consola de Superadministrador</h2>
               <p>Gestión global de negocios, auditorías técnicas, seguridad y métricas financieras.</p>
             </div>
-
-            <button className="secondary-btn" onClick={() => handleDemoLogin("client")} style={{ border: "1px solid var(--primary)", color: "var(--primary)" }}>
-              <span>Ir a Vista Cliente</span>
-            </button>
           </section>
 
           {/* Global platform statistics */}
@@ -1199,7 +1235,20 @@ export default function DashboardClient() {
 
           {/* Superadmin: Business administration and status */}
           <section className="section-card">
-            <h3 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "20px" }}>Gestión de Negocios y Estado</h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+              <h3 style={{ fontSize: "20px", fontWeight: "bold", margin: 0 }}>Gestión de Negocios y Estado ({filteredSuperadminBusinesses.length})</h3>
+              <div style={{ position: "relative", width: "300px" }}>
+                <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Buscar por negocio, dueño, categoría..."
+                  value={superadminSearch}
+                  onChange={(e) => setSuperadminSearch(e.target.value)}
+                  style={{ paddingLeft: "36px", fontSize: "13px", height: "36px" }}
+                />
+              </div>
+            </div>
 
             <div className="table-scroll-wrapper">
               <table className="data-table">
@@ -1214,7 +1263,7 @@ export default function DashboardClient() {
                   </tr>
                 </thead>
                 <tbody>
-                  {superadminBusinesses.map(b => (
+                  {filteredSuperadminBusinesses.map(b => (
                     <tr key={b.id}>
                       <td style={{ fontWeight: "bold" }}>{b.name}</td>
                       <td>{b.category}</td>
@@ -1245,7 +1294,7 @@ export default function DashboardClient() {
 
                           <button
                             className="danger-btn"
-                            onClick={() => handleDeleteBusinessSuper(b.id)}
+                            onClick={() => handleDeleteBusinessSuperClick(b.id, b.name)}
                             style={{ padding: "6px 12px", fontSize: "11px" }}
                           >
                             <Trash2 size={12} style={{ marginRight: "4px" }} />
@@ -1290,12 +1339,78 @@ export default function DashboardClient() {
         <span>BookFlow Premium &copy; 2026</span>
         <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
           <span>Sesión activa como: <strong>{userName}</strong> ({userRole})</span>
-          <button onClick={handleLogout} className="secondary-btn" style={{ padding: "6px 12px", fontSize: "12px", color: "var(--accent)", borderColor: "rgba(244,63,94,0.2)" }}>
-            <LogOut size={12} style={{ marginRight: "4px" }} />
-            Cerrar Sesión
-          </button>
         </div>
       </footer>
+
+      <AnimatePresence>
+        {deleteServiceTarget !== null && (
+          <div className="modal-backdrop">
+            <motion.div 
+              initial={{ scale: 0.95 }} 
+              animate={{ scale: 1 }} 
+              exit={{ scale: 0.95 }} 
+              className="modal-card"
+            >
+              <div className="modal-icon warning" style={{ marginBottom: 20 }}>
+                <AlertTriangle size={32} color="var(--warning)" />
+              </div>
+              <h3 className="modal-title">Eliminar Servicio</h3>
+              <p className="modal-text">¿Seguro que deseas eliminar este servicio? Esta acción no se puede deshacer.</p>
+              <div style={{ display: "flex", gap: 12, marginTop: 32, justifyContent: "flex-end" }}>
+                <button 
+                  type="button" 
+                  className="secondary-btn" 
+                  onClick={() => setDeleteServiceTarget(null)}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="button" 
+                  className="danger-btn" 
+                  onClick={confirmDeleteService}
+                >
+                  <Trash2 size={16} />
+                  Confirmar eliminación
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {deleteBusinessTarget !== null && (
+          <div className="modal-backdrop">
+            <motion.div 
+              initial={{ scale: 0.95 }} 
+              animate={{ scale: 1 }} 
+              exit={{ scale: 0.95 }} 
+              className="modal-card"
+            >
+              <div className="modal-icon danger" style={{ marginBottom: 20 }}>
+                <AlertTriangle size={32} color="var(--accent)" />
+              </div>
+              <h3 className="modal-title">Eliminar Negocio</h3>
+              <p className="modal-text">¿Eliminar permanentemente <strong>{deleteBusinessTarget.name}</strong>? Esta acción no se puede deshacer.</p>
+              <div style={{ display: "flex", gap: 12, marginTop: 32, justifyContent: "flex-end" }}>
+                <button 
+                  type="button" 
+                  className="secondary-btn" 
+                  onClick={() => setDeleteBusinessTarget(null)}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="button" 
+                  className="danger-btn" 
+                  onClick={confirmDeleteBusinessSuper}
+                >
+                  <Trash2 size={16} />
+                  Confirmar eliminación
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <style jsx global>{`
         @media (max-width: 768px) {

@@ -103,7 +103,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean, onClose:
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <img src="/krono_logo.png" alt="Krono Logo" style={{ width: "32px", height: "32px", borderRadius: "8px" }} />
+              <img src={activeBrightness === "light" ? "/dark_krono.png" : "/light_krono.png"} alt="Krono Logo" style={{ width: "32px", height: "32px", borderRadius: "8px" }} />
               <h2 className="admin-sidebar__title">Krono</h2>
             </div>
             <p className="admin-sidebar__subtitle" style={{ fontSize: "11px", color: "var(--primary)", fontWeight: "bold" }}>

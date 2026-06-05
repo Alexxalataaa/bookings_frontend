@@ -10,6 +10,13 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [activeBrightness, setActiveBrightness] = useState("dark");
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedBrightness = localStorage.getItem("app-brightness") || "dark";
+      setActiveBrightness(savedBrightness);
+    }
+  }, []);
   
   // Roles: "client" | "business" | "superadmin"
   const [role, setRole] = useState<"client" | "business" | "superadmin">("client");
@@ -475,7 +482,7 @@ export default function LoginPage() {
               {/* Logo & Header */}
               <div className={styles.header}>
                 <div className={styles.logo} style={{ background: "transparent", overflow: "hidden" }}>
-                  <img src="/krono_logo.png" alt="Krono Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <img src={activeBrightness === "light" ? "/dark_krono.png" : "/light_krono.png"} alt="Krono Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 </div>
                 <div>
                   <h1 className={styles.title}>Krono</h1>
