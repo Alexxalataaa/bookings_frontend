@@ -536,10 +536,6 @@ export default function DashboardClient() {
                 Agenda de forma dinámica, visualiza disponibilidad en tiempo real y gestiona tus reservas desde tu panel prémium.
               </p>
             </div>
-            <button className="primary-btn" onClick={() => handleDemoLogin("business")}>
-              <span>Ver Panel de Negocio</span>
-              <ChevronRight size={16} />
-            </button>
           </section>
 
           {/* Search bar & Filters */}
