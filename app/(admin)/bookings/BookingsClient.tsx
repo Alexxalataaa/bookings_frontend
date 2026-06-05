@@ -481,6 +481,7 @@ export default function BookingsClient() {
     setEditingBookingId(null);
     setDeleteTargetId(null);
     resetEditForm();
+    getCustomers().then(setCustomers).catch(console.error);
     setIsCreateOpen(true);
   }
 

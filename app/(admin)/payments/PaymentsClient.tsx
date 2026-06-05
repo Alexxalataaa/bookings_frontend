@@ -264,7 +264,10 @@ export default function PaymentsClient() {
           <button 
             className="primary-btn" 
             type="button" 
-            onClick={() => setIsFormOpen(true)}
+            onClick={() => {
+              getCustomers().then(setCustomers).catch(console.error);
+              setIsFormOpen(true);
+            }}
           >
             <Plus size={18} />
             <span>Registrar cobro</span>
