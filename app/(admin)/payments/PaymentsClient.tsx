@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Payment, CreatePaymentDto, createPayment, updatePayment, deletePayment, getPayments } from "@/lib/api";
+import { Payment, CreatePaymentDto, createPayment, updatePayment, deletePayment, getPayments, getCustomers, Customer } from "@/lib/api";
 import { 
   Wallet, 
   TrendingUp, 
@@ -97,15 +97,20 @@ const formatCurrency = (val: number) => new Intl.NumberFormat('es-ES', { style: 
 
 export default function PaymentsClient() {
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     setUserRole(localStorage.getItem("user_role"));
-    getPayments()
-      .then(setPayments)
-      .catch((err) => console.error("Error fetching payments:", err))
+    Promise.all([getPayments(), getCustomers()])
+      .then(([paymentsData, customersData]) => {
+        setPayments(paymentsData);
+        setCustomers(customersData);
+      })
+      .catch((err) => console.error("Error fetching data:", err))
       .finally(() => setInitialLoading(false));
   }, []);
 
@@ -314,15 +319,45 @@ export default function PaymentsClient() {
             
             <form onSubmit={handleSubmit} className="page-stack" style={{ marginTop: 24, gap: 24 }}>
               <div className="form-grid">
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px", position: "relative" }}>
                   <label style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-muted)" }}>Cliente</label>
                   <input
                     className="input"
                     placeholder="Nombre del cliente"
                     value={formData.clientName}
-                    onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, clientName: e.target.value });
+                      setShowCustomerDropdown(true);
+                    }}
+                    onFocus={() => setShowCustomerDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
                     required
                   />
+                  {showCustomerDropdown && formData.clientName && (
+                    <ul style={{
+                      position: "absolute", top: "100%", left: 0, right: 0,
+                      background: "rgba(15,17,22,0.95)", backdropFilter: "blur(10px)",
+                      border: "1px solid var(--border)", borderRadius: "8px",
+                      marginTop: "4px", zIndex: 50, listStyle: "none", padding: "4px",
+                      maxHeight: "200px", overflowY: "auto"
+                    }}>
+                      {customers.filter(c => c.name.toLowerCase().includes(formData.clientName.toLowerCase())).map(c => (
+                        <li 
+                          key={c.id} 
+                          style={{ padding: "8px 12px", cursor: "pointer", borderRadius: "4px", fontSize: "14px" }}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setFormData({ ...formData, clientName: c.name });
+                            setShowCustomerDropdown(false);
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = "var(--primary-gradient)"}
+                          onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                        >
+                          {c.name} {c.email ? `(${c.email})` : ''}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
                 {userRole !== "business" && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>

@@ -305,6 +305,8 @@ export default function BookingsClient() {
   const [showBusinessDropdown, setShowBusinessDropdown] = useState(false);
   const [businessEditSearchText, setBusinessEditSearchText] = useState("");
   const [showBusinessEditDropdown, setShowBusinessEditDropdown] = useState(false);
+  const [customerSearchText, setCustomerSearchText] = useState("");
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
 
   useEffect(() => {
     const role = localStorage.getItem("user_role");
@@ -741,19 +743,48 @@ export default function BookingsClient() {
                 )}
                 
                 {userRole !== "client" && (
-                  <select
-                    className="select"
-                    value={createForm.customerId}
-                    onChange={(e) => updateCreateForm("customerId", Number(e.target.value))}
-                    required
-                  >
-                    <option value="" disabled>Selecciona cliente</option>
-                    {customers.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div style={{ position: "relative" }}>
+                    <input
+                      className="input"
+                      type="text"
+                      placeholder="Buscar cliente..."
+                      value={customerSearchText}
+                      onChange={(e) => {
+                        setCustomerSearchText(e.target.value);
+                        setShowCustomerDropdown(true);
+                        if (createForm.customerId) updateCreateForm("customerId", 0);
+                      }}
+                      onFocus={() => setShowCustomerDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
+                      required
+                    />
+                    {showCustomerDropdown && customerSearchText && (
+                      <ul style={{
+                        position: "absolute", top: "100%", left: 0, right: 0,
+                        background: "rgba(15,17,22,0.95)", backdropFilter: "blur(10px)",
+                        border: "1px solid var(--border)", borderRadius: "8px",
+                        marginTop: "4px", zIndex: 50, listStyle: "none", padding: "4px",
+                        maxHeight: "200px", overflowY: "auto"
+                      }}>
+                        {customers.filter(c => c.name.toLowerCase().includes(customerSearchText.toLowerCase())).map(c => (
+                          <li 
+                            key={c.id} 
+                            style={{ padding: "8px 12px", cursor: "pointer", borderRadius: "4px", fontSize: "14px" }}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              updateCreateForm("customerId", c.id);
+                              setCustomerSearchText(c.name);
+                              setShowCustomerDropdown(false);
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = "var(--primary-gradient)"}
+                            onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                          >
+                            {c.name} {c.email ? `(${c.email})` : ''}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 )}
                 
                 {userRole !== "business" && (
