@@ -14,7 +14,8 @@ import {
   Paintbrush, 
   Maximize,
   X,
-  Eraser
+  Eraser,
+  Save
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
