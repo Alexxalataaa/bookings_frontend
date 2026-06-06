@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { getMyBusinesses, getSpots, createSpot, updateSpot, deleteSpot, Business, Spot } from "@/lib/api";
-import { LayoutGrid, Plus, Trash2, Edit3, Save, X, MapPin, RefreshCw } from "lucide-react";
+import { getMyBusinesses, getSpots, createSpot, updateSpot, deleteSpot, updateBusiness, Business, Spot } from "@/lib/api";
+import { LayoutGrid, Plus, Trash2, Edit3, Save, X, MapPin, RefreshCw, Maximize } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const GRID_COLS = 8;
-const GRID_ROWS = 6;
 const SPOT_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#f43f5e", "#3b82f6", "#a855f7", "#ec4899", "#14b8a6"];
 
 export default function SpotsPage() {
@@ -24,6 +22,16 @@ export default function SpotsPage() {
   const [formColor, setFormColor] = useState(SPOT_COLORS[0]);
   const [formX, setFormX] = useState(0);
   const [formY, setFormY] = useState(0);
+
+  // Map Config State
+  const [isConfiguringMap, setIsConfiguringMap] = useState(false);
+  const [configCols, setConfigCols] = useState(8);
+  const [configRows, setConfigRows] = useState(6);
+
+  // Computed map sizes
+  const selectedBusiness = businesses.find(b => b.id === selectedBizId);
+  const mapCols = selectedBusiness?.mapCols || 8;
+  const mapRows = selectedBusiness?.mapRows || 6;
 
   // Grid drag state
   const [dragging, setDragging] = useState<number | null>(null);
@@ -83,6 +91,26 @@ export default function SpotsPage() {
   const closeModal = () => {
     setIsCreating(false);
     setEditingSpot(null);
+  };
+
+  const handleSaveMapConfig = async () => {
+    if (!selectedBizId) return;
+    setSaving(true);
+    try {
+      await updateBusiness(selectedBizId, {
+        mapCols: configCols,
+        mapRows: configRows,
+      });
+      // Update local state
+      setBusinesses(prev => prev.map(b => 
+        b.id === selectedBizId ? { ...b, mapCols: configCols, mapRows: configRows } : b
+      ));
+      setIsConfiguringMap(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSaveSpot = async () => {
@@ -180,7 +208,7 @@ export default function SpotsPage() {
               Puesto definido
             </div>
             <div style={{ marginLeft: "auto", fontSize: "13px", color: "var(--text-muted)" }}>
-              {spots.length} puestos definidos · {GRID_COLS * GRID_ROWS - spots.length} celdas disponibles
+              {spots.length} puestos definidos · {mapCols * mapRows - spots.length} celdas disponibles
             </div>
           </div>
 
@@ -189,28 +217,36 @@ export default function SpotsPage() {
             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
               <LayoutGrid size={20} style={{ color: "var(--primary)" }} />
               <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700 }}>Editor Visual del Mapa</h3>
-              <span style={{ marginLeft: "auto", fontSize: "12px", color: "var(--text-muted)", background: "rgba(99,102,241,0.1)", padding: "4px 12px", borderRadius: "20px", border: "1px solid rgba(99,102,241,0.2)" }}>
-                {GRID_COLS} × {GRID_ROWS} cuadrícula
-              </span>
+              
+              <button 
+                onClick={() => {
+                  setConfigCols(mapCols);
+                  setConfigRows(mapRows);
+                  setIsConfiguringMap(true);
+                }}
+                style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--primary)", background: "rgba(99,102,241,0.1)", padding: "4px 12px", borderRadius: "20px", border: "1px solid rgba(99,102,241,0.2)", cursor: "pointer", transition: "all 0.2s" }}
+              >
+                <Maximize size={12} /> Ajustar Tamaño ({mapCols} × {mapRows})
+              </button>
             </div>
 
             {/* Column Labels */}
-            <div style={{ display: "grid", gridTemplateColumns: `32px repeat(${GRID_COLS}, 1fr)`, gap: "6px", marginBottom: "6px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: `32px repeat(${mapCols}, 1fr)`, gap: "6px", marginBottom: "6px", overflowX: "auto" }}>
               <div />
-              {Array.from({ length: GRID_COLS }, (_, i) => (
+              {Array.from({ length: mapCols }, (_, i) => (
                 <div key={i} style={{ textAlign: "center", fontSize: "11px", color: "var(--text-muted)", fontWeight: 700 }}>{i + 1}</div>
               ))}
             </div>
 
             {/* Grid Rows */}
-            {Array.from({ length: GRID_ROWS }, (_, rowIdx) => (
-              <div key={rowIdx} style={{ display: "grid", gridTemplateColumns: `32px repeat(${GRID_COLS}, 1fr)`, gap: "6px", marginBottom: "6px" }}>
-                {/* Row Label */}
+            <div style={{ overflowX: "auto", paddingBottom: "12px" }}>
+              {Array.from({ length: mapRows }, (_, rowIdx) => (
+                <div key={rowIdx} style={{ display: "grid", gridTemplateColumns: `32px repeat(${mapCols}, 1fr)`, gap: "6px", marginBottom: "6px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", color: "var(--text-muted)", fontWeight: 700 }}>
                   {String.fromCharCode(65 + rowIdx)}
                 </div>
 
-                {Array.from({ length: GRID_COLS }, (_, colIdx) => {
+                {Array.from({ length: mapCols }, (_, colIdx) => {
                   const spot = getSpotAt(colIdx, rowIdx);
                   return (
                     <motion.button
@@ -272,6 +308,7 @@ export default function SpotsPage() {
                 })}
               </div>
             ))}
+            </div>
           </section>
 
           {/* Spots List */}
@@ -398,13 +435,13 @@ export default function SpotsPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                   <div>
                     <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: "6px" }}>Columna (X)</label>
-                    <input type="number" className="input" value={formX} min={0} max={GRID_COLS - 1}
-                      onChange={e => setFormX(Math.max(0, Math.min(GRID_COLS - 1, Number(e.target.value))))} />
+                    <input type="number" className="input" value={formX} min={0} max={mapCols - 1}
+                      onChange={e => setFormX(Math.max(0, Math.min(mapCols - 1, Number(e.target.value))))} />
                   </div>
                   <div>
                     <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: "6px" }}>Fila (Y)</label>
-                    <input type="number" className="input" value={formY} min={0} max={GRID_ROWS - 1}
-                      onChange={e => setFormY(Math.max(0, Math.min(GRID_ROWS - 1, Number(e.target.value))))} />
+                    <input type="number" className="input" value={formY} min={0} max={mapRows - 1}
+                      onChange={e => setFormY(Math.max(0, Math.min(mapRows - 1, Number(e.target.value))))} />
                   </div>
                 </div>
 
@@ -436,6 +473,66 @@ export default function SpotsPage() {
                   >
                     <Save size={16} />
                     {saving ? "Guardando..." : (editingSpot ? "Actualizar" : "Crear Puesto")}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Configure Map Size Modal */}
+      <AnimatePresence>
+        {isConfiguringMap && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="modal-backdrop"
+            onClick={(e) => { if (e.target === e.currentTarget) setIsConfiguringMap(false); }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="modal-card"
+              style={{ maxWidth: "380px", width: "100%" }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                <h3 className="modal-title" style={{ margin: 0 }}>
+                  Ajustar Forma del Mapa
+                </h3>
+                <button className="icon-btn" onClick={() => setIsConfiguringMap(false)}><X size={18} /></button>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: 0 }}>
+                  Cambia el número de filas y columnas para adaptar la cuadrícula a la forma real de tu local (alargado, cuadrado, etc.).
+                </p>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                  <div>
+                    <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: "6px" }}>Columnas (Ancho)</label>
+                    <input type="number" className="input" value={configCols} min={2} max={20}
+                      onChange={e => setConfigCols(Math.max(2, Math.min(20, Number(e.target.value))))} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: "6px" }}>Filas (Alto)</label>
+                    <input type="number" className="input" value={configRows} min={2} max={20}
+                      onChange={e => setConfigRows(Math.max(2, Math.min(20, Number(e.target.value))))} />
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: "12px", marginTop: "12px", justifyContent: "flex-end" }}>
+                  <button type="button" className="secondary-btn" onClick={() => setIsConfiguringMap(false)}>Cancelar</button>
+                  <button
+                    type="button"
+                    className="primary-btn"
+                    onClick={handleSaveMapConfig}
+                    disabled={saving}
+                  >
+                    <Save size={16} />
+                    {saving ? "Guardando..." : "Guardar Diseño"}
                   </button>
                 </div>
               </div>

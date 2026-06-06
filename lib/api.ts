@@ -27,6 +27,8 @@ export interface Business {
   rating: number;
   reviewsCount: number;
   isSuspended: boolean;
+  mapCols?: number;
+  mapRows?: number;
   createdAt: string;
   services?: Service[];
   owner?: UserProfile;

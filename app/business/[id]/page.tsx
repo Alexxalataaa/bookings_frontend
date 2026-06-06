@@ -13,22 +13,11 @@ import {
   getSpots,
   Spot
 } from "@/lib/api";
-import { 
-  MapPin, 
-  Phone, 
-  Mail, 
-  Clock, 
-  Star, 
-  Globe, 
-  Calendar as CalendarIcon, 
-  ChevronRight, 
-  ArrowLeft, 
-  Sparkles,
-  CheckCircle,
-  AlertCircle
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { CheckCircle2, ChevronLeft, Calendar as CalendarIcon, MapPin, Building, Activity, ChevronRight, X, Phone, Mail, Clock, Star, Globe, Sparkles, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
+import { es } from "date-fns/locale";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -496,37 +485,89 @@ export default function BusinessLandingPage({ params }: PageProps) {
                       <div style={{ textAlign: "center", padding: "10px", color: "#94a3b8", fontSize: "12px", background: "rgba(255,255,255,0.02)", borderRadius: "8px" }}>Sin puestos configurados</div>
                     ) : (
                       <div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                          {spots.map(spot => (
-                            <button
-                              key={spot.id}
-                              onClick={() => setSelectedSpot(selectedSpot?.id === spot.id ? null : spot)}
-                              disabled={spot.available === false}
-                              style={{
-                                padding: "8px 12px", borderRadius: "10px", fontSize: "12px", fontWeight: 700,
-                                cursor: spot.available === false ? "not-allowed" : "pointer",
-                                border: selectedSpot?.id === spot.id
-                                  ? `2px solid ${spot.color || "#6366f1"}`
-                                  : "2px solid rgba(255,255,255,0.08)",
-                                background: spot.available === false
-                                  ? "rgba(244,63,94,0.08)"
-                                  : selectedSpot?.id === spot.id
-                                  ? `${spot.color || "#6366f1"}22`
-                                  : "rgba(255,255,255,0.03)",
-                                color: spot.available === false ? "#f43f5e" : spot.color || "#818cf8",
-                                opacity: spot.available === false ? 0.5 : 1,
-                                transition: "all 0.2s",
-                                display: "flex", alignItems: "center", gap: "6px",
-                              }}
-                            >
-                              <div style={{
-                                width: "16px", height: "16px", borderRadius: "4px",
-                                background: spot.available === false ? "#f43f5e" : spot.color || "#6366f1",
-                                opacity: spot.available === false ? 0.5 : 1,
-                              }} />
-                              {spot.label || spot.name}
-                              {spot.available === false && <span style={{ fontSize: "10px" }}>• Ocupado</span>}
-                            </button>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", fontSize: "11px", color: "#94a3b8" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <div style={{ width: "12px", height: "12px", borderRadius: "3px", background: "rgba(255,255,255,0.05)", border: "1px dashed rgba(255,255,255,0.15)" }} />
+                            Libre
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <div style={{ width: "12px", height: "12px", borderRadius: "3px", background: "rgba(244,63,94,0.15)", border: "1px solid rgba(244,63,94,0.3)" }} />
+                            Ocupado
+                          </div>
+                        </div>
+
+                        <div style={{ background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", padding: "12px", overflowX: "auto" }}>
+                          {/* Column Labels */}
+                          <div style={{ display: "grid", gridTemplateColumns: `24px repeat(${business.mapCols || 8}, 1fr)`, gap: "4px", marginBottom: "4px", minWidth: "max-content" }}>
+                            <div />
+                            {Array.from({ length: business.mapCols || 8 }, (_, i) => (
+                              <div key={i} style={{ textAlign: "center", fontSize: "10px", color: "var(--text-muted)", fontWeight: 700 }}>{i + 1}</div>
+                            ))}
+                          </div>
+
+                          {/* Grid Rows */}
+                          {Array.from({ length: business.mapRows || 6 }, (_, rowIdx) => (
+                            <div key={rowIdx} style={{ display: "grid", gridTemplateColumns: `24px repeat(${business.mapCols || 8}, 1fr)`, gap: "4px", marginBottom: "4px", minWidth: "max-content" }}>
+                              {/* Row Label */}
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", color: "var(--text-muted)", fontWeight: 700 }}>
+                                {String.fromCharCode(65 + rowIdx)}
+                              </div>
+
+                              {Array.from({ length: business.mapCols || 8 }, (_, colIdx) => {
+                                const spot = spots.find(s => s.posX === colIdx && s.posY === rowIdx);
+                                return (
+                                  <button
+                                    key={colIdx}
+                                    type="button"
+                                    onClick={() => spot && spot.available !== false && setSelectedSpot(selectedSpot?.id === spot.id ? null : spot)}
+                                    disabled={!spot || spot.available === false}
+                                    style={{
+                                      height: "48px",
+                                      minWidth: "48px",
+                                      borderRadius: "8px",
+                                      border: !spot
+                                        ? "1px dashed rgba(255,255,255,0.05)"
+                                        : spot.available === false
+                                          ? "1px solid rgba(244,63,94,0.3)"
+                                          : selectedSpot?.id === spot.id
+                                            ? `2px solid ${spot.color || "#6366f1"}`
+                                            : `1px solid ${spot.color || "#6366f1"}40`,
+                                      background: !spot
+                                        ? "transparent"
+                                        : spot.available === false
+                                          ? "rgba(244,63,94,0.08)"
+                                          : selectedSpot?.id === spot.id
+                                            ? `${spot.color || "#6366f1"}22`
+                                            : "rgba(255,255,255,0.02)",
+                                      cursor: !spot ? "default" : spot.available === false ? "not-allowed" : "pointer",
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      gap: "2px",
+                                      transition: "all 0.2s",
+                                      opacity: spot?.available === false ? 0.6 : 1,
+                                    }}
+                                  >
+                                    {spot && (
+                                      <>
+                                        <div style={{
+                                          width: "20px", height: "20px", borderRadius: "6px",
+                                          background: spot.available === false ? "#f43f5e" : spot.color || "#6366f1",
+                                          display: "flex", alignItems: "center", justifyContent: "center",
+                                          fontSize: "9px", fontWeight: 900, color: "#fff",
+                                        }}>
+                                          {spot.label || spot.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <span style={{ fontSize: "8px", color: spot.available === false ? "#f43f5e" : "var(--text-muted)", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "0 2px" }}>
+                                          {spot.name}
+                                        </span>
+                                      </>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           ))}
                         </div>
                         {selectedSpot && (
