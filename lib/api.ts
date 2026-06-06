@@ -410,3 +410,59 @@ export async function getSystemLogs(limit: number = 50): Promise<SystemLog[]> {
 export async function getSystemMetrics(): Promise<any> {
   return authedFetch<any>(`${API_URL}/logs/metrics`, { cache: "no-store" });
 }
+
+// --- SPOTS (Visual Map) ---
+export interface Spot {
+  id: number;
+  name: string;
+  label?: string;
+  posX: number;
+  posY: number;
+  color?: string;
+  businessId: number;
+  available?: boolean; // filled when querying with date+time
+}
+
+export async function getSpots(businessId: number, date?: string, time?: string): Promise<Spot[]> {
+  let url = `${API_URL}/spots?businessId=${businessId}`;
+  if (date) url += `&date=${date}`;
+  if (time) url += `&time=${encodeURIComponent(time)}`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function createSpot(data: Partial<Spot>): Promise<Spot> {
+  return authedFetch<Spot>(`${API_URL}/spots`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateSpot(id: number, data: Partial<Spot>): Promise<Spot> {
+  return authedFetch<Spot>(`${API_URL}/spots/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteSpot(id: number): Promise<void> {
+  await authedFetch<void>(`${API_URL}/spots/${id}`, { method: "DELETE" });
+}
+
+// --- WHATSAPP SIMULATOR ---
+export async function whatsappSimulate(phoneNumber: string, message: string): Promise<{ reply: string }> {
+  const res = await fetch(`${API_URL}/whatsapp/simulate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phoneNumber, message }),
+  });
+  if (!res.ok) throw new Error("Error en el simulador de WhatsApp");
+  return res.json();
+}
+
+export async function getWhatsappSessions(): Promise<any[]> {
+  return authedFetch<any[]>(`${API_URL}/whatsapp/sessions`, { cache: "no-store" });
+}

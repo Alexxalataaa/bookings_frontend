@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Calendar, Users, CreditCard, X, Sun, Moon, User, Search, History, Settings, FileCode2, TrendingUp, Palette, ChevronDown } from "lucide-react";
+import { LayoutDashboard, Calendar, Users, CreditCard, X, Sun, Moon, User, Search, History, Settings, FileCode2, TrendingUp, Palette, ChevronDown, LayoutGrid, MessageCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
@@ -16,6 +16,8 @@ const businessMenuItems = [
   { label: "Reservas", href: "/bookings", icon: Calendar },
   { label: "Clientes", href: "/customers", icon: Users },
   { label: "Pagos", href: "/payments", icon: CreditCard },
+  { label: "Mapa de Puestos", href: "/spots", icon: LayoutGrid },
+  { label: "Bot WhatsApp", href: "/whatsapp", icon: MessageCircle },
   { label: "Perfil Negocio", href: "/profile", icon: User },
 ];
 
@@ -24,6 +26,7 @@ const superadminMenuItems = [
   { label: "Métricas Globales", href: "/superadmin/metrics", icon: TrendingUp },
   { label: "Gestión Negocios", href: "/superadmin/businesses", icon: FileCode2 },
   { label: "Cuentas", href: "/superadmin/accounts", icon: Settings },
+  { label: "Bot WhatsApp", href: "/whatsapp", icon: MessageCircle },
   { label: "Mi Perfil", href: "/profile", icon: User },
 ];
 
@@ -278,7 +281,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean, onClose:
       </div>
       
       <div style={{ marginTop: "auto", padding: "12px", opacity: 0.4, fontSize: "11px", fontWeight: 600, letterSpacing: "0.05em" }}>
-        V1.0.4 PREMIUM EDITION
+        V1.0.5 PREMIUM EDITION
       </div>
     </aside>
   );

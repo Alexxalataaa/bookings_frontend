@@ -9,7 +9,9 @@ import {
   BookingStatus, 
   Business, 
   Service, 
-  createPayment 
+  createPayment,
+  getSpots,
+  Spot
 } from "@/lib/api";
 import { 
   MapPin, 
@@ -46,6 +48,11 @@ export default function BusinessLandingPage({ params }: PageProps) {
   const [selectedTime, setSelectedTime] = useState("");
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
+
+  // Visual map states
+  const [spots, setSpots] = useState<Spot[]>([]);
+  const [spotsLoading, setSpotsLoading] = useState(false);
+  const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
   
   // Guest booking forms (in case client is not logged in)
   const [isGuest, setIsGuest] = useState(true);
@@ -64,6 +71,23 @@ export default function BusinessLandingPage({ params }: PageProps) {
 
     fetchBusinessData();
   }, [id]);
+
+  // Load spots when date+time is selected
+  useEffect(() => {
+    if (!business || !selectedDate || !selectedTime) {
+      setSpots([]);
+      setSelectedSpot(null);
+      return;
+    }
+    setSpotsLoading(true);
+    getSpots(business.id, selectedDate, selectedTime)
+      .then(data => {
+        setSpots(data || []);
+        setSelectedSpot(null);
+      })
+      .catch(() => setSpots([]))
+      .finally(() => setSpotsLoading(false));
+  }, [business, selectedDate, selectedTime]);
 
   const availableSlots = useMemo(() => {
     if (!selectedDate || !business || !business.hours) return [];
@@ -193,9 +217,10 @@ export default function BusinessLandingPage({ params }: PageProps) {
         businessId: business!.id,
         serviceName: selectedService.name,
         serviceId: selectedService.id,
+        spotId: selectedSpot?.id,
       };
 
-      await createAppointment(bookingData);
+      await createAppointment(bookingData as any);
 
       // Create associated payment on backend
       await createPayment({
@@ -460,6 +485,59 @@ export default function BusinessLandingPage({ params }: PageProps) {
                     </select>
                   </div>
                 </div>
+
+                {/* Visual Spot Map */}
+                {selectedDate && selectedTime && (
+                  <div style={{ marginBottom: "20px" }}>
+                    <label style={{ fontSize: "12px", fontWeight: "bold", color: "#94a3b8", display: "block", marginBottom: "10px" }}>3. Puesto (opcional)</label>
+                    {spotsLoading ? (
+                      <div style={{ textAlign: "center", padding: "16px", color: "#94a3b8", fontSize: "13px" }}>Cargando puestos...</div>
+                    ) : spots.length === 0 ? (
+                      <div style={{ textAlign: "center", padding: "10px", color: "#94a3b8", fontSize: "12px", background: "rgba(255,255,255,0.02)", borderRadius: "8px" }}>Sin puestos configurados</div>
+                    ) : (
+                      <div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                          {spots.map(spot => (
+                            <button
+                              key={spot.id}
+                              onClick={() => setSelectedSpot(selectedSpot?.id === spot.id ? null : spot)}
+                              disabled={spot.available === false}
+                              style={{
+                                padding: "8px 12px", borderRadius: "10px", fontSize: "12px", fontWeight: 700,
+                                cursor: spot.available === false ? "not-allowed" : "pointer",
+                                border: selectedSpot?.id === spot.id
+                                  ? `2px solid ${spot.color || "#6366f1"}`
+                                  : "2px solid rgba(255,255,255,0.08)",
+                                background: spot.available === false
+                                  ? "rgba(244,63,94,0.08)"
+                                  : selectedSpot?.id === spot.id
+                                  ? `${spot.color || "#6366f1"}22`
+                                  : "rgba(255,255,255,0.03)",
+                                color: spot.available === false ? "#f43f5e" : spot.color || "#818cf8",
+                                opacity: spot.available === false ? 0.5 : 1,
+                                transition: "all 0.2s",
+                                display: "flex", alignItems: "center", gap: "6px",
+                              }}
+                            >
+                              <div style={{
+                                width: "16px", height: "16px", borderRadius: "4px",
+                                background: spot.available === false ? "#f43f5e" : spot.color || "#6366f1",
+                                opacity: spot.available === false ? 0.5 : 1,
+                              }} />
+                              {spot.label || spot.name}
+                              {spot.available === false && <span style={{ fontSize: "10px" }}>• Ocupado</span>}
+                            </button>
+                          ))}
+                        </div>
+                        {selectedSpot && (
+                          <div style={{ marginTop: "8px", fontSize: "12px", color: "#818cf8", display: "flex", alignItems: "center", gap: "6px" }}>
+                            ✓ Puesto seleccionado: <strong>{selectedSpot.name}</strong>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Guest user form */}
                 {isGuest && (
