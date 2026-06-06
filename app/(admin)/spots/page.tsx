@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getMyBusinesses, getSpots, createSpot, updateSpot, deleteSpot, updateBusiness, Business, Spot } from "@/lib/api";
-import { LayoutGrid, Plus, Trash2, Edit3, Save, X, MapPin, RefreshCw, Maximize } from "lucide-react";
+import { LayoutGrid, Plus, Trash2, Edit3, Save, X, MapPin, RefreshCw, Maximize, MousePointer2, Paintbrush, Palette } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const SPOT_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#f43f5e", "#3b82f6", "#a855f7", "#ec4899", "#14b8a6"];
@@ -28,20 +28,32 @@ export default function SpotsPage() {
   const [configCols, setConfigCols] = useState(8);
   const [configRows, setConfigRows] = useState(6);
 
+  // Interactive Editor States
+  const [editorMode, setEditorMode] = useState<"select" | "draw">("select");
+  const [selectedSpotIds, setSelectedSpotIds] = useState<number[]>([]);
+  
+  // Lasso State
+  const [isLassoing, setIsLassoing] = useState(false);
+  const [lassoStart, setLassoStart] = useState<{x: number, y: number} | null>(null);
+  const [lassoCurrent, setLassoCurrent] = useState<{x: number, y: number} | null>(null);
+
   // Computed map sizes
   const selectedBusiness = businesses.find(b => b.id === selectedBizId);
   const mapCols = selectedBusiness?.mapCols || 8;
   const mapRows = selectedBusiness?.mapRows || 6;
 
-  // Grid drag state
-  const [dragging, setDragging] = useState<number | null>(null);
-
   useEffect(() => {
     fetchBusinesses();
+    const handleMouseUpGlobal = () => handleLassoEnd();
+    window.addEventListener("mouseup", handleMouseUpGlobal);
+    return () => window.removeEventListener("mouseup", handleMouseUpGlobal);
   }, []);
 
   useEffect(() => {
-    if (selectedBizId !== null) fetchSpots(selectedBizId);
+    if (selectedBizId !== null) {
+      fetchSpots(selectedBizId);
+      setSelectedSpotIds([]); // Clear selection when changing business
+    }
   }, [selectedBizId]);
 
   const fetchBusinesses = async () => {
@@ -148,13 +160,142 @@ export default function SpotsPage() {
     if (!confirm("¿Eliminar este puesto?")) return;
     try {
       await deleteSpot(id);
+      setSelectedSpotIds(prev => prev.filter(sId => sId !== id));
       if (selectedBizId) await fetchSpots(selectedBizId);
     } catch (err) {
       console.error(err);
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedSpotIds.length === 0) return;
+    if (!confirm(`¿Eliminar ${selectedSpotIds.length} puestos?`)) return;
+    try {
+      setSaving(true);
+      await Promise.all(selectedSpotIds.map(id => deleteSpot(id)));
+      setSelectedSpotIds([]);
+      if (selectedBizId) await fetchSpots(selectedBizId);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleBulkColor = async (color: string) => {
+    if (selectedSpotIds.length === 0) return;
+    try {
+      setSaving(true);
+      await Promise.all(selectedSpotIds.map(id => updateSpot(id, { color })));
+      if (selectedBizId) await fetchSpots(selectedBizId);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const getSpotAt = (x: number, y: number) => spots.find(s => s.posX === x && s.posY === y);
+
+  // Interactive Handlers
+  const handleSpotClick = (spot: Spot) => {
+    if (editorMode === "select") {
+      setSelectedSpotIds(prev => 
+        prev.includes(spot.id) ? prev.filter(id => id !== spot.id) : [...prev, spot.id]
+      );
+    } else {
+      openEdit(spot);
+    }
+  };
+
+  const handleCellMouseDown = (x: number, y: number) => {
+    if (editorMode === "select") {
+      setIsLassoing(true);
+      setLassoStart({ x, y });
+      setLassoCurrent({ x, y });
+      // Deselect all on click empty space
+      setSelectedSpotIds([]);
+    } else if (editorMode === "draw") {
+      createQuickSpot(x, y);
+    }
+  };
+
+  const handleCellMouseEnter = (x: number, y: number) => {
+    if (isLassoing && editorMode === "select") {
+      setLassoCurrent({ x, y });
+    } else if (editorMode === "draw" && isLassoing) { // We can reuse isLassoing for dragging draw
+      createQuickSpot(x, y);
+    }
+  };
+
+  const handleLassoEnd = () => {
+    if (!isLassoing) return;
+    setIsLassoing(false);
+    if (editorMode === "select" && lassoStart && lassoCurrent) {
+      const minX = Math.min(lassoStart.x, lassoCurrent.x);
+      const maxX = Math.max(lassoStart.x, lassoCurrent.x);
+      const minY = Math.min(lassoStart.y, lassoCurrent.y);
+      const maxY = Math.max(lassoStart.y, lassoCurrent.y);
+      
+      const newSelection = spots.filter(s => 
+        s.posX >= minX && s.posX <= maxX && s.posY >= minY && s.posY <= maxY
+      ).map(s => s.id);
+      
+      if (newSelection.length > 0) {
+        setSelectedSpotIds(newSelection);
+      }
+    }
+    setLassoStart(null);
+    setLassoCurrent(null);
+  };
+
+  const isCellInLasso = (x: number, y: number) => {
+    if (!lassoStart || !lassoCurrent || !isLassoing || editorMode !== "select") return false;
+    const minX = Math.min(lassoStart.x, lassoCurrent.x);
+    const maxX = Math.max(lassoStart.x, lassoCurrent.x);
+    const minY = Math.min(lassoStart.y, lassoCurrent.y);
+    const maxY = Math.max(lassoStart.y, lassoCurrent.y);
+    return x >= minX && x <= maxX && y >= minY && y <= maxY;
+  };
+
+  const createQuickSpot = async (x: number, y: number) => {
+    if (!selectedBizId || getSpotAt(x, y) || saving) return;
+    // We don't await this completely to allow fast drawing, just trigger it
+    const nextNum = spots.length + 1;
+    const color = SPOT_COLORS[spots.length % SPOT_COLORS.length];
+    
+    // Optimistic local update (optional, but let's just trigger and fetch)
+    try {
+      await createSpot({
+        name: `Puesto ${nextNum}`,
+        label: `P${nextNum}`,
+        color: color,
+        posX: x,
+        posY: y,
+        businessId: selectedBizId,
+      });
+      fetchSpots(selectedBizId);
+    } catch(err) {}
+  };
+
+  const handleDragStartSpot = (e: React.DragEvent, spotId: number) => {
+    if (editorMode !== "select") e.preventDefault();
+    e.dataTransfer.setData("spotId", spotId.toString());
+  };
+
+  const handleDropOnCell = async (e: React.DragEvent, x: number, y: number) => {
+    e.preventDefault();
+    const spotId = e.dataTransfer.getData("spotId");
+    if (!spotId) return;
+    
+    const id = Number(spotId);
+    if (!getSpotAt(x, y)) {
+      try {
+        await updateSpot(id, { posX: x, posY: y });
+        if (selectedBizId) await fetchSpots(selectedBizId);
+      } catch (err) { console.error(err); }
+    }
+  };
 
   if (loading) {
     return (
@@ -218,16 +359,46 @@ export default function SpotsPage() {
               <LayoutGrid size={20} style={{ color: "var(--primary)" }} />
               <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700 }}>Editor Visual del Mapa</h3>
               
-              <button 
-                onClick={() => {
-                  setConfigCols(mapCols);
-                  setConfigRows(mapRows);
-                  setIsConfiguringMap(true);
-                }}
-                style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--primary)", background: "rgba(99,102,241,0.1)", padding: "4px 12px", borderRadius: "20px", border: "1px solid rgba(99,102,241,0.2)", cursor: "pointer", transition: "all 0.2s" }}
-              >
-                <Maximize size={12} /> Ajustar Tamaño ({mapCols} × {mapRows})
-              </button>
+              <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
+                {/* Mode Toggles */}
+                <div style={{ display: "flex", background: "rgba(255,255,255,0.05)", borderRadius: "8px", padding: "4px" }}>
+                  <button
+                    onClick={() => setEditorMode("select")}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", borderRadius: "6px",
+                      fontSize: "12px", fontWeight: 700, cursor: "pointer", border: "none",
+                      background: editorMode === "select" ? "var(--primary)" : "transparent",
+                      color: editorMode === "select" ? "#fff" : "var(--text-muted)",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    <MousePointer2 size={14} /> Mover / Seleccionar
+                  </button>
+                  <button
+                    onClick={() => { setEditorMode("draw"); setSelectedSpotIds([]); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", borderRadius: "6px",
+                      fontSize: "12px", fontWeight: 700, cursor: "pointer", border: "none",
+                      background: editorMode === "draw" ? "#10b981" : "transparent",
+                      color: editorMode === "draw" ? "#fff" : "var(--text-muted)",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    <Paintbrush size={14} /> Pintar Puestos
+                  </button>
+                </div>
+
+                <button 
+                  onClick={() => {
+                    setConfigCols(mapCols);
+                    setConfigRows(mapRows);
+                    setIsConfiguringMap(true);
+                  }}
+                  style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--primary)", background: "rgba(99,102,241,0.1)", padding: "4px 12px", borderRadius: "8px", border: "1px solid rgba(99,102,241,0.2)", cursor: "pointer", transition: "all 0.2s" }}
+                >
+                  <Maximize size={12} /> Ajustar ({mapCols}×{mapRows})
+                </button>
+              </div>
             </div>
 
             {/* Column Labels */}
@@ -248,30 +419,46 @@ export default function SpotsPage() {
 
                 {Array.from({ length: mapCols }, (_, colIdx) => {
                   const spot = getSpotAt(colIdx, rowIdx);
+                  const isSelected = spot ? selectedSpotIds.includes(spot.id) : false;
+                  const inLasso = isCellInLasso(colIdx, rowIdx);
+                  
                   return (
-                    <motion.button
+                    <motion.div
                       key={colIdx}
-                      whileHover={{ scale: 1.05 }}
+                      whileHover={{ scale: spot ? 1.05 : 1 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => openCreate(colIdx, rowIdx)}
+                      onClick={() => spot ? handleSpotClick(spot) : openCreate(colIdx, rowIdx)}
+                      onMouseDown={(e) => {
+                        if (!spot) handleCellMouseDown(colIdx, rowIdx);
+                      }}
+                      onMouseEnter={() => handleCellMouseEnter(colIdx, rowIdx)}
+                      onDragOver={(e) => { if (!spot) e.preventDefault(); }}
+                      onDrop={(e) => handleDropOnCell(e, colIdx, rowIdx)}
+                      draggable={!!spot && editorMode === "select"}
+                      onDragStart={(e: any) => spot && handleDragStartSpot(e, spot.id)}
                       style={{
                         height: "68px",
                         borderRadius: "10px",
-                        border: spot
-                          ? `2px solid ${spot.color || "var(--primary)"}40`
-                          : "2px dashed rgba(255,255,255,0.1)",
-                        background: spot
-                          ? `linear-gradient(135deg, ${spot.color || "var(--primary)"}22, ${spot.color || "var(--primary)"}08)`
-                          : "rgba(255,255,255,0.02)",
-                        cursor: "pointer",
+                        border: isSelected || inLasso 
+                          ? `2px solid #fff`
+                          : spot
+                            ? `2px solid ${spot.color || "var(--primary)"}40`
+                            : "2px dashed rgba(255,255,255,0.1)",
+                        background: isSelected || inLasso
+                          ? spot ? `${spot.color || "var(--primary)"}80` : "rgba(255,255,255,0.1)"
+                          : spot
+                            ? `linear-gradient(135deg, ${spot.color || "var(--primary)"}22, ${spot.color || "var(--primary)"}08)`
+                            : "rgba(255,255,255,0.02)",
+                        cursor: spot && editorMode === "select" ? "grab" : editorMode === "draw" && !spot ? "crosshair" : "pointer",
                         display: "flex",
                         flexDirection: "column",
                         alignItems: "center",
                         justifyContent: "center",
                         gap: "4px",
-                        transition: "all 0.2s",
+                        transition: "all 0.1s",
                         position: "relative",
                         overflow: "hidden",
+                        boxShadow: isSelected ? "0 0 0 3px rgba(255,255,255,0.2)" : "none",
                       }}
                     >
                       {spot ? (
@@ -289,21 +476,22 @@ export default function SpotsPage() {
                             {spot.name}
                           </span>
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleDelete(spot.id); }}
+                            onClick={(e) => { e.stopPropagation(); openEdit(spot); }}
                             style={{
                               position: "absolute", top: "3px", right: "3px",
-                              background: "rgba(244,63,94,0.15)", border: "none",
-                              borderRadius: "4px", cursor: "pointer", padding: "2px",
-                              color: "#f43f5e", opacity: 0.7, display: "flex",
+                              background: "rgba(255,255,255,0.1)", border: "none",
+                              borderRadius: "4px", cursor: "pointer", padding: "3px",
+                              color: "#fff", display: "flex",
                             }}
+                            title="Editar"
                           >
-                            <X size={10} />
+                            <Edit3 size={10} />
                           </button>
                         </>
                       ) : (
-                        <Plus size={18} style={{ color: "rgba(255,255,255,0.15)" }} />
+                        <Plus size={18} style={{ color: "rgba(255,255,255,0.15)", opacity: editorMode === "draw" ? 0.8 : 1 }} />
                       )}
-                    </motion.button>
+                    </motion.div>
                   );
                 })}
               </div>
@@ -537,6 +725,67 @@ export default function SpotsPage() {
                 </div>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Bulk Actions Toolbar */}
+      <AnimatePresence>
+        {selectedSpotIds.length > 0 && (
+          <motion.div
+            initial={{ y: 100, opacity: 0, x: "-50%" }}
+            animate={{ y: 0, opacity: 1, x: "-50%" }}
+            exit={{ y: 100, opacity: 0, x: "-50%" }}
+            style={{
+              position: "fixed", bottom: "40px", left: "50%",
+              background: "rgba(15,23,42,0.95)", border: "1px solid rgba(255,255,255,0.1)",
+              padding: "12px 24px", borderRadius: "100px", boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
+              display: "flex", alignItems: "center", gap: "24px", zIndex: 100, backdropFilter: "blur(10px)"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 700, fontSize: "14px" }}>
+              <div style={{ background: "var(--primary)", width: "24px", height: "24px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", color: "white" }}>
+                {selectedSpotIds.length}
+              </div>
+              Seleccionados
+            </div>
+            
+            <div style={{ width: "1px", height: "24px", background: "rgba(255,255,255,0.1)" }} />
+            
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Color:</span>
+              <div style={{ display: "flex", gap: "6px" }}>
+                {SPOT_COLORS.map(c => (
+                  <motion.button
+                    key={c}
+                    whileHover={{ scale: 1.2 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => handleBulkColor(c)}
+                    style={{
+                      width: "20px", height: "20px", borderRadius: "50%", background: c,
+                      border: "none", cursor: "pointer"
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div style={{ width: "1px", height: "24px", background: "rgba(255,255,255,0.1)" }} />
+
+            <button
+              onClick={handleBulkDelete}
+              className="danger-btn"
+              style={{ display: "flex", alignItems: "center", gap: "6px", padding: "8px 16px", borderRadius: "20px", fontSize: "13px", border: "none", cursor: "pointer" }}
+            >
+              <Trash2 size={14} /> Eliminar
+            </button>
+            
+            <button
+              onClick={() => setSelectedSpotIds([])}
+              style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "4px" }}
+            >
+              <X size={18} />
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
