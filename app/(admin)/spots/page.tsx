@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { getMyBusinesses, getSpots, createSpot, updateSpot, deleteSpot, updateBusiness, Business, Spot } from "@/lib/api";
 import { LayoutGrid, Plus, Trash2, Edit3, Save, X, MapPin, RefreshCw, Maximize, MousePointer2, Paintbrush, Palette } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,10 +23,20 @@ export default function SpotsPage() {
   const [formX, setFormX] = useState(0);
   const [formY, setFormY] = useState(0);
 
-  // Map Config State
-  const [isConfiguringMap, setIsConfiguringMap] = useState(false);
+  // Map Config State (Optimistic sizes)
   const [configCols, setConfigCols] = useState(8);
   const [configRows, setConfigRows] = useState(6);
+
+  // Resize State
+  const [isResizingMap, setIsResizingMap] = useState(false);
+  const resizeRef = useRef({
+    startX: 0,
+    startY: 0,
+    startCols: 8,
+    startRows: 6,
+    currentCols: 8,
+    currentRows: 6,
+  });
 
   // Interactive Editor States
   const [editorMode, setEditorMode] = useState<"select" | "draw">("select");
@@ -42,12 +52,71 @@ export default function SpotsPage() {
   const mapCols = selectedBusiness?.mapCols || 8;
   const mapRows = selectedBusiness?.mapRows || 6;
 
+  // Sync config state with selected business
   useEffect(() => {
-    fetchBusinesses();
-    const handleMouseUpGlobal = () => handleLassoEnd();
+    if (selectedBusiness && !isResizingMap) {
+      setConfigCols(selectedBusiness.mapCols || 8);
+      setConfigRows(selectedBusiness.mapRows || 6);
+    }
+  }, [selectedBusiness, isResizingMap]);
+
+  useEffect(() => {
+    const handleMouseUpGlobal = () => {
+      handleLassoEnd();
+    };
+    
     window.addEventListener("mouseup", handleMouseUpGlobal);
-    return () => window.removeEventListener("mouseup", handleMouseUpGlobal);
-  }, []);
+    return () => {
+      window.removeEventListener("mouseup", handleMouseUpGlobal);
+    };
+  }, [isLassoing, editorMode, lassoStart, lassoCurrent, spots]);
+
+  // Handle global mouse events for resizing
+  useEffect(() => {
+    const handleMouseMoveGlobal = (e: MouseEvent) => {
+      if (isResizingMap) {
+        // Approximate cell size is 74px (68px + 6px gap)
+        const dx = e.clientX - resizeRef.current.startX;
+        const dy = e.clientY - resizeRef.current.startY;
+        
+        const newCols = Math.max(2, Math.min(20, resizeRef.current.startCols + Math.round(dx / 74)));
+        const newRows = Math.max(2, Math.min(20, resizeRef.current.startRows + Math.round(dy / 74)));
+        
+        setConfigCols(newCols);
+        setConfigRows(newRows);
+        resizeRef.current.currentCols = newCols;
+        resizeRef.current.currentRows = newRows;
+      }
+    };
+
+    const handleMouseUpGlobalResize = async () => {
+      if (isResizingMap) {
+        setIsResizingMap(false);
+        if (selectedBizId && (resizeRef.current.currentCols !== resizeRef.current.startCols || resizeRef.current.currentRows !== resizeRef.current.startRows)) {
+          // Optimistically update businesses state
+          setBusinesses(prev => prev.map(b => 
+            b.id === selectedBizId ? { ...b, mapCols: resizeRef.current.currentCols, mapRows: resizeRef.current.currentRows } : b
+          ));
+          try {
+            await updateBusiness(selectedBizId, { 
+              mapCols: resizeRef.current.currentCols, 
+              mapRows: resizeRef.current.currentRows 
+            });
+          } catch(err) { console.error(err); }
+        }
+      }
+    };
+
+    if (isResizingMap) {
+      window.addEventListener("mousemove", handleMouseMoveGlobal);
+      window.addEventListener("mouseup", handleMouseUpGlobalResize);
+    }
+    
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMoveGlobal);
+      window.removeEventListener("mouseup", handleMouseUpGlobalResize);
+    };
+  }, [isResizingMap, selectedBizId]);
 
   useEffect(() => {
     if (selectedBizId !== null) {
@@ -105,25 +174,7 @@ export default function SpotsPage() {
     setEditingSpot(null);
   };
 
-  const handleSaveMapConfig = async () => {
-    if (!selectedBizId) return;
-    setSaving(true);
-    try {
-      await updateBusiness(selectedBizId, {
-        mapCols: configCols,
-        mapRows: configRows,
-      });
-      // Update local state
-      setBusinesses(prev => prev.map(b => 
-        b.id === selectedBizId ? { ...b, mapCols: configCols, mapRows: configRows } : b
-      ));
-      setIsConfiguringMap(false);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  };
+
 
   const handleSaveSpot = async () => {
     if (!formName.trim() || selectedBizId === null) return;
@@ -387,115 +438,139 @@ export default function SpotsPage() {
                     <Paintbrush size={14} /> Pintar Puestos
                   </button>
                 </div>
-
-                <button 
-                  onClick={() => {
-                    setConfigCols(mapCols);
-                    setConfigRows(mapRows);
-                    setIsConfiguringMap(true);
-                  }}
-                  style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--primary)", background: "rgba(99,102,241,0.1)", padding: "4px 12px", borderRadius: "8px", border: "1px solid rgba(99,102,241,0.2)", cursor: "pointer", transition: "all 0.2s" }}
-                >
-                  <Maximize size={12} /> Ajustar ({mapCols}×{mapRows})
-                </button>
               </div>
             </div>
 
             {/* Column Labels */}
-            <div style={{ display: "grid", gridTemplateColumns: `32px repeat(${mapCols}, 1fr)`, gap: "6px", marginBottom: "6px", overflowX: "auto" }}>
+            <div style={{ display: "grid", gridTemplateColumns: `32px repeat(${configCols}, 1fr)`, gap: "6px", marginBottom: "6px", minWidth: "max-content", transition: "all 0.1s" }}>
               <div />
-              {Array.from({ length: mapCols }, (_, i) => (
+              {Array.from({ length: configCols }, (_, i) => (
                 <div key={i} style={{ textAlign: "center", fontSize: "11px", color: "var(--text-muted)", fontWeight: 700 }}>{i + 1}</div>
               ))}
             </div>
 
             {/* Grid Rows */}
-            <div style={{ overflowX: "auto", paddingBottom: "12px" }}>
-              {Array.from({ length: mapRows }, (_, rowIdx) => (
-                <div key={rowIdx} style={{ display: "grid", gridTemplateColumns: `32px repeat(${mapCols}, 1fr)`, gap: "6px", marginBottom: "6px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", color: "var(--text-muted)", fontWeight: 700 }}>
-                  {String.fromCharCode(65 + rowIdx)}
-                </div>
+            <div style={{ overflowX: "auto", paddingBottom: "12px", position: "relative" }}>
+              <div style={{ display: "inline-block", position: "relative" }}>
+                {Array.from({ length: configRows }, (_, rowIdx) => (
+                  <div key={rowIdx} style={{ display: "grid", gridTemplateColumns: `32px repeat(${configCols}, 1fr)`, gap: "6px", marginBottom: "6px", transition: "all 0.1s" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", color: "var(--text-muted)", fontWeight: 700 }}>
+                    {String.fromCharCode(65 + rowIdx)}
+                  </div>
 
-                {Array.from({ length: mapCols }, (_, colIdx) => {
-                  const spot = getSpotAt(colIdx, rowIdx);
-                  const isSelected = spot ? selectedSpotIds.includes(spot.id) : false;
-                  const inLasso = isCellInLasso(colIdx, rowIdx);
-                  
-                  return (
-                    <motion.div
-                      key={colIdx}
-                      whileHover={{ scale: spot ? 1.05 : 1 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => spot ? handleSpotClick(spot) : openCreate(colIdx, rowIdx)}
-                      onMouseDown={(e) => {
-                        if (!spot) handleCellMouseDown(colIdx, rowIdx);
-                      }}
-                      onMouseEnter={() => handleCellMouseEnter(colIdx, rowIdx)}
-                      onDragOver={(e) => { if (!spot) e.preventDefault(); }}
-                      onDrop={(e) => handleDropOnCell(e, colIdx, rowIdx)}
-                      draggable={!!spot && editorMode === "select"}
-                      onDragStart={(e: any) => spot && handleDragStartSpot(e, spot.id)}
-                      style={{
-                        height: "68px",
-                        borderRadius: "10px",
-                        border: isSelected || inLasso 
-                          ? `2px solid #fff`
-                          : spot
-                            ? `2px solid ${spot.color || "var(--primary)"}40`
-                            : "2px dashed rgba(255,255,255,0.1)",
-                        background: isSelected || inLasso
-                          ? spot ? `${spot.color || "var(--primary)"}80` : "rgba(255,255,255,0.1)"
-                          : spot
-                            ? `linear-gradient(135deg, ${spot.color || "var(--primary)"}22, ${spot.color || "var(--primary)"}08)`
-                            : "rgba(255,255,255,0.02)",
-                        cursor: spot && editorMode === "select" ? "grab" : editorMode === "draw" && !spot ? "crosshair" : "pointer",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "4px",
-                        transition: "all 0.1s",
-                        position: "relative",
-                        overflow: "hidden",
-                        boxShadow: isSelected ? "0 0 0 3px rgba(255,255,255,0.2)" : "none",
-                      }}
-                    >
-                      {spot ? (
-                        <>
-                          <div style={{
-                            width: "28px", height: "28px", borderRadius: "8px",
-                            background: spot.color || "var(--primary)",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: "10px", fontWeight: 900, color: "#fff",
-                            boxShadow: `0 4px 12px ${spot.color || "var(--primary)"}60`,
-                          }}>
-                            {spot.label || spot.name.charAt(0).toUpperCase()}
-                          </div>
-                          <span style={{ fontSize: "9px", color: "var(--text-muted)", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "0 4px" }}>
-                            {spot.name}
-                          </span>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); openEdit(spot); }}
-                            style={{
-                              position: "absolute", top: "3px", right: "3px",
-                              background: "rgba(255,255,255,0.1)", border: "none",
-                              borderRadius: "4px", cursor: "pointer", padding: "3px",
-                              color: "#fff", display: "flex",
-                            }}
-                            title="Editar"
-                          >
-                            <Edit3 size={10} />
-                          </button>
-                        </>
-                      ) : (
-                        <Plus size={18} style={{ color: "rgba(255,255,255,0.15)", opacity: editorMode === "draw" ? 0.8 : 1 }} />
-                      )}
-                    </motion.div>
-                  );
-                })}
+                  {Array.from({ length: configCols }, (_, colIdx) => {
+                    const spot = getSpotAt(colIdx, rowIdx);
+                    const isSelected = spot ? selectedSpotIds.includes(spot.id) : false;
+                    const inLasso = isCellInLasso(colIdx, rowIdx);
+                    
+                    return (
+                      <motion.div
+                        key={colIdx}
+                        whileHover={{ scale: spot ? 1.05 : 1 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => spot ? handleSpotClick(spot) : openCreate(colIdx, rowIdx)}
+                        onMouseDown={(e) => {
+                          if (!spot) handleCellMouseDown(colIdx, rowIdx);
+                        }}
+                        onMouseEnter={() => handleCellMouseEnter(colIdx, rowIdx)}
+                        onDragOver={(e) => { if (!spot) e.preventDefault(); }}
+                        onDrop={(e) => handleDropOnCell(e, colIdx, rowIdx)}
+                        draggable={!!spot && editorMode === "select"}
+                        onDragStart={(e: any) => spot && handleDragStartSpot(e, spot.id)}
+                        style={{
+                          height: "68px",
+                          borderRadius: "10px",
+                          border: isSelected || inLasso 
+                            ? `2px solid #fff`
+                            : spot
+                              ? `2px solid ${spot.color || "var(--primary)"}40`
+                              : "2px dashed rgba(255,255,255,0.1)",
+                          background: isSelected || inLasso
+                            ? spot ? `${spot.color || "var(--primary)"}80` : "rgba(255,255,255,0.1)"
+                            : spot
+                              ? `linear-gradient(135deg, ${spot.color || "var(--primary)"}22, ${spot.color || "var(--primary)"}08)`
+                              : "rgba(255,255,255,0.02)",
+                          cursor: spot && editorMode === "select" ? "grab" : editorMode === "draw" && !spot ? "crosshair" : "pointer",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "4px",
+                          transition: "all 0.1s",
+                          position: "relative",
+                          overflow: "hidden",
+                          boxShadow: isSelected ? "0 0 0 3px rgba(255,255,255,0.2)" : "none",
+                        }}
+                      >
+                        {spot ? (
+                          <>
+                            <div style={{
+                              width: "28px", height: "28px", borderRadius: "8px",
+                              background: spot.color || "var(--primary)",
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              fontSize: "10px", fontWeight: 900, color: "#fff",
+                              boxShadow: `0 4px 12px ${spot.color || "var(--primary)"}60`,
+                            }}>
+                              {spot.label || spot.name.charAt(0).toUpperCase()}
+                            </div>
+                            <span style={{ fontSize: "9px", color: "var(--text-muted)", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "0 4px" }}>
+                              {spot.name}
+                            </span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); openEdit(spot); }}
+                              style={{
+                                position: "absolute", top: "3px", right: "3px",
+                                background: "rgba(255,255,255,0.1)", border: "none",
+                                borderRadius: "4px", cursor: "pointer", padding: "3px",
+                                color: "#fff", display: "flex",
+                              }}
+                              title="Editar"
+                            >
+                              <Edit3 size={10} />
+                            </button>
+                          </>
+                        ) : (
+                          <Plus size={18} style={{ color: "rgba(255,255,255,0.15)", opacity: editorMode === "draw" ? 0.8 : 1 }} />
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                  </div>
+                ))}
+
+                {/* Resize Handle at Bottom-Right */}
+                <div 
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setIsResizingMap(true);
+                    resizeRef.current = {
+                      startX: e.clientX,
+                      startY: e.clientY,
+                      startCols: configCols,
+                      startRows: configRows,
+                      currentCols: configCols,
+                      currentRows: configRows,
+                    };
+                  }}
+                  style={{
+                    position: "absolute",
+                    right: "-12px",
+                    bottom: "-12px",
+                    width: "24px",
+                    height: "24px",
+                    background: "var(--primary)",
+                    borderRadius: "50%",
+                    cursor: "nwse-resize",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+                    zIndex: 10
+                  }}
+                >
+                  <Maximize size={12} color="#fff" style={{ transform: "rotate(45deg)" }} />
+                </div>
               </div>
-            ))}
             </div>
           </section>
 
@@ -669,65 +744,7 @@ export default function SpotsPage() {
         )}
       </AnimatePresence>
 
-      {/* Configure Map Size Modal */}
-      <AnimatePresence>
-        {isConfiguringMap && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="modal-backdrop"
-            onClick={(e) => { if (e.target === e.currentTarget) setIsConfiguringMap(false); }}
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              className="modal-card"
-              style={{ maxWidth: "380px", width: "100%" }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                <h3 className="modal-title" style={{ margin: 0 }}>
-                  Ajustar Forma del Mapa
-                </h3>
-                <button className="icon-btn" onClick={() => setIsConfiguringMap(false)}><X size={18} /></button>
-              </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: 0 }}>
-                  Cambia el número de filas y columnas para adaptar la cuadrícula a la forma real de tu local (alargado, cuadrado, etc.).
-                </p>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                  <div>
-                    <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: "6px" }}>Columnas (Ancho)</label>
-                    <input type="number" className="input" value={configCols} min={2} max={20}
-                      onChange={e => setConfigCols(Math.max(2, Math.min(20, Number(e.target.value))))} />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: "6px" }}>Filas (Alto)</label>
-                    <input type="number" className="input" value={configRows} min={2} max={20}
-                      onChange={e => setConfigRows(Math.max(2, Math.min(20, Number(e.target.value))))} />
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", gap: "12px", marginTop: "12px", justifyContent: "flex-end" }}>
-                  <button type="button" className="secondary-btn" onClick={() => setIsConfiguringMap(false)}>Cancelar</button>
-                  <button
-                    type="button"
-                    className="primary-btn"
-                    onClick={handleSaveMapConfig}
-                    disabled={saving}
-                  >
-                    <Save size={16} />
-                    {saving ? "Guardando..." : "Guardar Diseño"}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Floating Bulk Actions Toolbar */}
       <AnimatePresence>
