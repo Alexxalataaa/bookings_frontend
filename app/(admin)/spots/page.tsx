@@ -61,6 +61,10 @@ export default function SpotsPage() {
   }, [selectedBusiness, isResizingMap]);
 
   useEffect(() => {
+    fetchBusinesses();
+  }, []);
+
+  useEffect(() => {
     const handleMouseUpGlobal = () => {
       handleLassoEnd();
     };
