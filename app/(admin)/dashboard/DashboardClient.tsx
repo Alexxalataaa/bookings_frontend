@@ -55,6 +55,7 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import ChatWidget from "@/components/ChatWidget";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   AreaChart, Area, PieChart, Pie, Cell
@@ -655,7 +656,7 @@ export default function DashboardClient() {
       {/* -------------------- 1. CLIENT VIEWS -------------------- */}
       {effectiveRole === "client" && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="page-stack">
-
+          <ChatWidget />
           <section className="page-hero" style={{ background: "linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.04) 100%)", border: "1px solid rgba(99, 102, 241, 0.2)" }}>
             <div style={{ maxWidth: "600px" }}>
               <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(99, 102, 241, 0.15)", padding: "6px 12px", borderRadius: "20px", fontSize: "12px", color: "var(--primary)", fontWeight: "bold", marginBottom: "16px" }}>
