@@ -515,6 +515,10 @@ export default function BusinessLandingPage({ params }: PageProps) {
 
                               {Array.from({ length: business.mapCols || 8 }, (_, colIdx) => {
                                 const spot = spots.find(s => s.posX === colIdx && s.posY === rowIdx);
+                                if (spot && spot.type === "wall") {
+                                  return <div key={colIdx} style={{ height: "48px", minWidth: "48px" }} />; // Invisible spacer for wall
+                                }
+                                
                                 return (
                                   <button
                                     key={colIdx}

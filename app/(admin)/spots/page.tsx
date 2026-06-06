@@ -39,7 +39,7 @@ export default function SpotsPage() {
   });
 
   // Interactive Editor States
-  const [editorMode, setEditorMode] = useState<"select" | "draw">("select");
+  const [editorMode, setEditorMode] = useState<"select" | "draw" | "wall">("select");
   const [selectedSpotIds, setSelectedSpotIds] = useState<number[]>([]);
   
   // Lasso State
@@ -211,8 +211,8 @@ export default function SpotsPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("¿Eliminar este puesto?")) return;
+  const handleDelete = async (id: number, skipConfirm: boolean = false) => {
+    if (!skipConfirm && !confirm("¿Eliminar este puesto?")) return;
     try {
       await deleteSpot(id);
       setSelectedSpotIds(prev => prev.filter(sId => sId !== id));
@@ -272,6 +272,13 @@ export default function SpotsPage() {
       setSelectedSpotIds([]);
     } else if (editorMode === "draw") {
       createQuickSpot(x, y);
+    } else if (editorMode === "wall") {
+      const spot = getSpotAt(x, y);
+      if (spot && spot.type === "wall") {
+        handleDelete(spot.id, true);
+      } else if (!spot) {
+        createWallSpot(x, y);
+      }
     }
   };
 
@@ -316,7 +323,7 @@ export default function SpotsPage() {
   const createQuickSpot = async (x: number, y: number) => {
     if (!selectedBizId || getSpotAt(x, y) || saving) return;
     // We don't await this completely to allow fast drawing, just trigger it
-    const nextNum = spots.length + 1;
+    const nextNum = spots.filter(s => s.type !== "wall").length + 1;
     const color = SPOT_COLORS[spots.length % SPOT_COLORS.length];
     
     // Optimistic local update (optional, but let's just trigger and fetch)
@@ -327,6 +334,23 @@ export default function SpotsPage() {
         color: color,
         posX: x,
         posY: y,
+        type: "spot",
+        businessId: selectedBizId,
+      });
+      fetchSpots(selectedBizId);
+    } catch(err) {}
+  };
+
+  const createWallSpot = async (x: number, y: number) => {
+    if (!selectedBizId || getSpotAt(x, y) || saving) return;
+    try {
+      await createSpot({
+        name: `Muro`,
+        label: ``,
+        color: `#1e293b`,
+        posX: x,
+        posY: y,
+        type: "wall",
         businessId: selectedBizId,
       });
       fetchSpots(selectedBizId);
@@ -427,7 +451,7 @@ export default function SpotsPage() {
                       transition: "all 0.2s"
                     }}
                   >
-                    <MousePointer2 size={14} /> Mover / Seleccionar
+                    <MousePointer2 size={14} /> Mover
                   </button>
                   <button
                     onClick={() => { setEditorMode("draw"); setSelectedSpotIds([]); }}
@@ -440,6 +464,18 @@ export default function SpotsPage() {
                     }}
                   >
                     <Paintbrush size={14} /> Pintar Puestos
+                  </button>
+                  <button
+                    onClick={() => { setEditorMode("wall"); setSelectedSpotIds([]); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", borderRadius: "6px",
+                      fontSize: "12px", fontWeight: 700, cursor: "pointer", border: "none",
+                      background: editorMode === "wall" ? "#ef4444" : "transparent",
+                      color: editorMode === "wall" ? "#fff" : "var(--text-muted)",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    <X size={14} /> Crear Hueco / Muro
                   </button>
                 </div>
               </div>
@@ -479,22 +515,24 @@ export default function SpotsPage() {
                         onMouseEnter={() => handleCellMouseEnter(colIdx, rowIdx)}
                         onDragOver={(e) => { if (!spot) e.preventDefault(); }}
                         onDrop={(e) => handleDropOnCell(e, colIdx, rowIdx)}
-                        draggable={!!spot && editorMode === "select"}
-                        onDragStart={(e: any) => spot && handleDragStartSpot(e, spot.id)}
+                        draggable={!!spot && spot.type !== "wall" && editorMode === "select"}
+                        onDragStart={(e: any) => spot && spot.type !== "wall" && handleDragStartSpot(e, spot.id)}
                         style={{
                           height: "68px",
                           borderRadius: "10px",
                           border: isSelected || inLasso 
                             ? `2px solid #fff`
                             : spot
-                              ? `2px solid ${spot.color || "var(--primary)"}40`
+                              ? spot.type === "wall" ? "none" : `2px solid ${spot.color || "var(--primary)"}40`
                               : "2px dashed rgba(255,255,255,0.1)",
                           background: isSelected || inLasso
                             ? spot ? `${spot.color || "var(--primary)"}80` : "rgba(255,255,255,0.1)"
                             : spot
-                              ? `linear-gradient(135deg, ${spot.color || "var(--primary)"}22, ${spot.color || "var(--primary)"}08)`
+                              ? spot.type === "wall" 
+                                ? "repeating-linear-gradient(45deg, rgba(255,255,255,0.03), rgba(255,255,255,0.03) 10px, rgba(255,255,255,0.08) 10px, rgba(255,255,255,0.08) 20px)" 
+                                : `linear-gradient(135deg, ${spot.color || "var(--primary)"}22, ${spot.color || "var(--primary)"}08)`
                               : "rgba(255,255,255,0.02)",
-                          cursor: spot && editorMode === "select" ? "grab" : editorMode === "draw" && !spot ? "crosshair" : "pointer",
+                          cursor: spot && editorMode === "select" && spot.type !== "wall" ? "grab" : editorMode === "draw" && !spot ? "crosshair" : editorMode === "wall" ? "pointer" : "pointer",
                           display: "flex",
                           flexDirection: "column",
                           alignItems: "center",
@@ -504,9 +542,13 @@ export default function SpotsPage() {
                           position: "relative",
                           overflow: "hidden",
                           boxShadow: isSelected ? "0 0 0 3px rgba(255,255,255,0.2)" : "none",
+                          opacity: spot && spot.type === "wall" ? 0.6 : 1,
                         }}
                       >
                         {spot ? (
+                          spot.type === "wall" ? (
+                            <X size={20} style={{ color: "rgba(255,255,255,0.2)" }} />
+                          ) : (
                           <>
                             <div style={{
                               width: "28px", height: "28px", borderRadius: "8px",
@@ -533,6 +575,7 @@ export default function SpotsPage() {
                               <Edit3 size={10} />
                             </button>
                           </>
+                          )
                         ) : (
                           <Plus size={18} style={{ color: "rgba(255,255,255,0.15)", opacity: editorMode === "draw" ? 0.8 : 1 }} />
                         )}
@@ -579,11 +622,11 @@ export default function SpotsPage() {
           </section>
 
           {/* Spots List */}
-          {spots.length > 0 && (
+          {spots.filter(s => s.type !== "wall").length > 0 && (
             <section className="section-card" style={{ background: "rgba(255,255,255,0.01)", border: "1px solid var(--border)" }}>
-              <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "20px" }}>Lista de Puestos ({spots.length})</h3>
+              <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "20px" }}>Lista de Puestos ({spots.filter(s => s.type !== "wall").length})</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "12px" }}>
-                {spots.map(spot => (
+                {spots.filter(s => s.type !== "wall").map(spot => (
                   <motion.div
                     key={spot.id}
                     initial={{ opacity: 0, y: 10 }}

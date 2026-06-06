@@ -421,6 +421,7 @@ export interface Spot {
   posX: number;
   posY: number;
   color?: string;
+  type?: string;
   businessId: number;
   available?: boolean; // filled when querying with date+time
 }
