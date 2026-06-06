@@ -541,8 +541,8 @@ export default function BusinessLandingPage({ params }: PageProps) {
                                         : spot.available === false
                                           ? "rgba(244,63,94,0.08)"
                                           : selectedSpot?.id === spot.id
-                                            ? `${spot.color || "#6366f1"}22`
-                                            : "rgba(255,255,255,0.02)",
+                                            ? `${spot.color || "#6366f1"}15`
+                                            : "rgba(255,255,255,0.01)",
                                       cursor: !spot ? "default" : spot.available === false ? "not-allowed" : "pointer",
                                       display: "flex",
                                       flexDirection: "column",
@@ -560,6 +560,7 @@ export default function BusinessLandingPage({ params }: PageProps) {
                                           background: spot.available === false ? "#f43f5e" : spot.color || "#6366f1",
                                           display: "flex", alignItems: "center", justifyContent: "center",
                                           fontSize: "9px", fontWeight: 900, color: "#fff",
+                                          boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
                                         }}>
                                           {spot.label || spot.name.charAt(0).toUpperCase()}
                                         </div>

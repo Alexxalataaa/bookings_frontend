@@ -2,7 +2,20 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { getMyBusinesses, getSpots, createSpot, updateSpot, deleteSpot, updateBusiness, Business, Spot } from "@/lib/api";
-import { LayoutGrid, Plus, Trash2, Edit3, Save, X, MapPin, RefreshCw, Maximize, MousePointer2, Paintbrush, Palette } from "lucide-react";
+import { 
+  MapPin, 
+  Plus, 
+  Trash2, 
+  RefreshCw, 
+  Edit3, 
+  CheckCircle2, 
+  LayoutGrid, 
+  MousePointer2, 
+  Paintbrush, 
+  Maximize,
+  X,
+  Eraser
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const SPOT_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#f43f5e", "#3b82f6", "#a855f7", "#ec4899", "#14b8a6"];
@@ -39,7 +52,7 @@ export default function SpotsPage() {
   });
 
   // Interactive Editor States
-  const [editorMode, setEditorMode] = useState<"select" | "draw" | "wall">("select");
+  const [editorMode, setEditorMode] = useState<"select" | "draw" | "wall" | "erase">("select");
   const [selectedSpotIds, setSelectedSpotIds] = useState<number[]>([]);
   
   // Lasso State
@@ -279,6 +292,11 @@ export default function SpotsPage() {
       } else if (!spot) {
         createWallSpot(x, y);
       }
+    } else if (editorMode === "erase") {
+      const spot = getSpotAt(x, y);
+      if (spot) {
+        handleDelete(spot.id, true);
+      }
     }
   };
 
@@ -287,6 +305,14 @@ export default function SpotsPage() {
       setLassoCurrent({ x, y });
     } else if (editorMode === "draw" && isLassoing) { // We can reuse isLassoing for dragging draw
       createQuickSpot(x, y);
+    } else if (editorMode === "erase" && isLassoing) {
+      const spot = getSpotAt(x, y);
+      if (spot) {
+        handleDelete(spot.id, true);
+      }
+    } else if (editorMode === "wall" && isLassoing) {
+      const spot = getSpotAt(x, y);
+      if (!spot) createWallSpot(x, y);
     }
   };
 
@@ -470,12 +496,24 @@ export default function SpotsPage() {
                     style={{
                       display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", borderRadius: "6px",
                       fontSize: "12px", fontWeight: 700, cursor: "pointer", border: "none",
-                      background: editorMode === "wall" ? "#ef4444" : "transparent",
+                      background: editorMode === "wall" ? "#64748b" : "transparent",
                       color: editorMode === "wall" ? "#fff" : "var(--text-muted)",
                       transition: "all 0.2s"
                     }}
                   >
-                    <X size={14} /> Crear Hueco / Muro
+                    <X size={14} /> Crear Hueco
+                  </button>
+                  <button
+                    onClick={() => { setEditorMode("erase"); setSelectedSpotIds([]); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", borderRadius: "6px",
+                      fontSize: "12px", fontWeight: 700, cursor: "pointer", border: "none",
+                      background: editorMode === "erase" ? "#ef4444" : "transparent",
+                      color: editorMode === "erase" ? "#fff" : "var(--text-muted)",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    <Eraser size={14} /> Borrar
                   </button>
                 </div>
               </div>
@@ -526,13 +564,13 @@ export default function SpotsPage() {
                               ? spot.type === "wall" ? "none" : `2px solid ${spot.color || "var(--primary)"}40`
                               : "2px dashed rgba(255,255,255,0.1)",
                           background: isSelected || inLasso
-                            ? spot ? `${spot.color || "var(--primary)"}80` : "rgba(255,255,255,0.1)"
+                            ? spot ? `${spot.color || "var(--primary)"}40` : "rgba(255,255,255,0.05)"
                             : spot
                               ? spot.type === "wall" 
-                                ? "repeating-linear-gradient(45deg, rgba(255,255,255,0.03), rgba(255,255,255,0.03) 10px, rgba(255,255,255,0.08) 10px, rgba(255,255,255,0.08) 20px)" 
-                                : `linear-gradient(135deg, ${spot.color || "var(--primary)"}22, ${spot.color || "var(--primary)"}08)`
+                                ? "repeating-linear-gradient(45deg, rgba(255,255,255,0.02), rgba(255,255,255,0.02) 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px)" 
+                                : `linear-gradient(135deg, ${spot.color || "var(--primary)"}15, rgba(255,255,255,0.01))`
                               : "rgba(255,255,255,0.02)",
-                          cursor: spot && editorMode === "select" && spot.type !== "wall" ? "grab" : editorMode === "draw" && !spot ? "crosshair" : editorMode === "wall" ? "pointer" : "pointer",
+                          cursor: spot && editorMode === "select" && spot.type !== "wall" ? "grab" : editorMode === "draw" && !spot ? "crosshair" : editorMode === "wall" ? "pointer" : editorMode === "erase" && spot ? "crosshair" : "pointer",
                           display: "flex",
                           flexDirection: "column",
                           alignItems: "center",
@@ -555,7 +593,7 @@ export default function SpotsPage() {
                               background: spot.color || "var(--primary)",
                               display: "flex", alignItems: "center", justifyContent: "center",
                               fontSize: "10px", fontWeight: 900, color: "#fff",
-                              boxShadow: `0 4px 12px ${spot.color || "var(--primary)"}60`,
+                              boxShadow: `0 2px 4px rgba(0,0,0,0.2)`,
                             }}>
                               {spot.label || spot.name.charAt(0).toUpperCase()}
                             </div>
