@@ -11,9 +11,11 @@ import {
   Service, 
   createPayment,
   getSpots,
-  Spot
+  Spot,
+  getRewards,
+  Reward
 } from "@/lib/api";
-import { CheckCircle2, ChevronLeft, Calendar as CalendarIcon, MapPin, Building, Activity, ChevronRight, X, Phone, Mail, Clock, Star, Globe, Sparkles, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react";
+import { CheckCircle2, ChevronLeft, Calendar as CalendarIcon, MapPin, Building, Activity, ChevronRight, X, Phone, Mail, Clock, Star, Globe, Sparkles, CheckCircle, AlertCircle, ArrowLeft, Gift } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import ChatWidget from "@/components/ChatWidget";
@@ -43,6 +45,9 @@ export default function BusinessLandingPage({ params }: PageProps) {
   const [spots, setSpots] = useState<Spot[]>([]);
   const [spotsLoading, setSpotsLoading] = useState(false);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
+
+  // Rewards state
+  const [rewards, setRewards] = useState<Reward[]>([]);
   
   // Guest booking forms (in case client is not logged in)
   const [isGuest, setIsGuest] = useState(true);
@@ -127,6 +132,13 @@ export default function BusinessLandingPage({ params }: PageProps) {
       setError(null);
       const data = await getBusiness(id);
       setBusiness(data);
+
+      try {
+        const rData = await getRewards(data.id);
+        setRewards(rData.filter(r => r.isActive));
+      } catch (err) {
+        console.error("Error fetching rewards:", err);
+      }
     } catch (err: any) {
       console.error(err);
       setError("No se pudo cargar la información del negocio.");

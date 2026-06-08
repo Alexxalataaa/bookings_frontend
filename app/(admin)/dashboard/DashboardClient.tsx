@@ -18,8 +18,13 @@ import {
   updateAppointment,
   deleteAppointment,
   getPayments,
+  getRewards,
+  createReward,
+  updateReward,
+  deleteReward,
   Business,
   Service,
+  Reward,
   Booking,
   Payment
 } from "@/lib/api";
@@ -40,6 +45,7 @@ import {
   Ban,
   Trash2,
   Plus,
+  Gift,
   RefreshCw,
   LogOut,
   UserCheck,
@@ -76,6 +82,7 @@ export default function DashboardClient() {
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [businessBookings, setBusinessBookings] = useState<Booking[]>([]);
   const [businessServices, setBusinessServices] = useState<Service[]>([]);
+  const [businessRewards, setBusinessRewards] = useState<Reward[]>([]);
   const [businessPayments, setBusinessPayments] = useState<Payment[]>([]);
 
   // Client view States
@@ -213,6 +220,14 @@ export default function DashboardClient() {
   const [serviceDuration, setServiceDuration] = useState("30");
   const [serviceDesc, setServiceDesc] = useState("");
 
+  // Reward Management form state
+  const [showAddReward, setShowAddReward] = useState(false);
+  const [editingReward, setEditingReward] = useState<Reward | null>(null);
+  const [rewardName, setRewardName] = useState("");
+  const [rewardDesc, setRewardDesc] = useState("");
+  const [rewardPoints, setRewardPoints] = useState("");
+  const [rewardValidUntil, setRewardValidUntil] = useState("");
+
   // Business settings form state
   const [showSettingsTab, setShowSettingsTab] = useState(false);
   const [editBizName, setEditBizName] = useState("");
@@ -314,10 +329,12 @@ export default function DashboardClient() {
       const bookings = await getAppointments(business.id);
       const services = await getServices(business.id);
       const payments = await getPayments(undefined, business.id);
+      const rewards = await getRewards(business.id);
 
       setBusinessBookings(bookings);
       setBusinessServices(services);
       setBusinessPayments(payments);
+      setBusinessRewards(rewards);
     } catch (err) {
       console.error("Error loading data for business", business.name, err);
     }
@@ -486,6 +503,70 @@ export default function DashboardClient() {
     setServiceDuration(service.duration.toString());
     setServiceDesc(service.description || "");
     setShowAddService(true);
+  };
+
+  // Manage Rewards (Create / Update / Delete)
+  const handleSaveReward = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBusiness) return;
+
+    try {
+      if (editingReward) {
+        await updateReward(editingReward.id, {
+          name: rewardName,
+          description: rewardDesc,
+          pointsRequired: rewardPoints ? Number(rewardPoints) : undefined,
+          validUntil: rewardValidUntil || undefined,
+        });
+      } else {
+        await createReward({
+          name: rewardName,
+          description: rewardDesc,
+          pointsRequired: rewardPoints ? Number(rewardPoints) : undefined,
+          validUntil: rewardValidUntil || undefined,
+          isActive: true,
+          businessId: selectedBusiness.id
+        });
+      }
+
+      // Reload rewards list
+      const rewards = await getRewards(selectedBusiness.id);
+      setBusinessRewards(rewards);
+
+      // Reset reward form
+      setRewardName("");
+      setRewardDesc("");
+      setRewardPoints("");
+      setRewardValidUntil("");
+      setShowAddReward(false);
+      setEditingReward(null);
+    } catch (err) {
+      console.error("Error saving reward:", err);
+    }
+  };
+
+  const [deleteRewardTarget, setDeleteRewardTarget] = useState<number | null>(null);
+
+  const confirmDeleteReward = async () => {
+    if (deleteRewardTarget === null || !selectedBusiness) return;
+    try {
+      await deleteReward(deleteRewardTarget);
+      const rewards = await getRewards(selectedBusiness.id);
+      setBusinessRewards(rewards);
+    } catch (err) {
+      console.error("Error deleting reward:", err);
+    } finally {
+      setDeleteRewardTarget(null);
+    }
+  };
+
+  const handleEditRewardClick = (reward: Reward) => {
+    setEditingReward(reward);
+    setRewardName(reward.name);
+    setRewardDesc(reward.description || "");
+    setRewardPoints(reward.pointsRequired ? reward.pointsRequired.toString() : "");
+    setRewardValidUntil(reward.validUntil || "");
+    setShowAddReward(true);
   };
 
   // Booking Actions (Confirm / Cancel)
@@ -1213,6 +1294,116 @@ export default function DashboardClient() {
                       ))}
                     </div>
                   </section>
+
+                  {/* Rewards Management */}
+                  <section className="section-card" style={{ marginTop: "24px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                      <h3 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>Gestión de Premios y Recompensas</h3>
+                      <button className="primary-btn" onClick={() => {
+                        setEditingReward(null);
+                        setRewardName("");
+                        setRewardDesc("");
+                        setRewardPoints("");
+                        setRewardValidUntil("");
+                        setShowAddReward(true);
+                      }} style={{ padding: "8px 16px", fontSize: "12px", background: "linear-gradient(135deg, #f59e0b, #d97706)", border: "none" }}>
+                        <Gift size={14} /> Añadir Premio
+                      </button>
+                    </div>
+
+                    {businessRewards.length === 0 ? (
+                      <p style={{ color: "var(--text-muted)", fontSize: "14px", textAlign: "center", padding: "20px" }}>No has registrado ningún premio aún. ¡Incentiva a tus clientes creando uno!</p>
+                    ) : (
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
+                        {businessRewards.map(r => (
+                          <div key={r.id} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(245, 158, 11, 0.2)", borderRadius: "12px", padding: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                              <h4 style={{ fontSize: "15px", fontWeight: "bold", margin: 0, color: "#f59e0b" }}>{r.name}</h4>
+                            </div>
+                            <p style={{ margin: 0, fontSize: "13px", color: "var(--text-muted)", flex: 1 }}>{r.description || "Sin condiciones específicas."}</p>
+                            
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "4px" }}>
+                              {r.pointsRequired ? (
+                                <span style={{ background: "rgba(245, 158, 11, 0.1)", color: "#f59e0b", padding: "4px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: "bold" }}>
+                                  Req: {r.pointsRequired} pts
+                                </span>
+                              ) : null}
+                              {r.validUntil ? (
+                                <span style={{ background: "rgba(99, 102, 241, 0.1)", color: "var(--primary)", padding: "4px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: "bold" }}>
+                                  Válido hasta: {r.validUntil}
+                                </span>
+                              ) : null}
+                            </div>
+
+                            <div style={{ display: "flex", gap: "8px", borderTop: "1px solid var(--border)", paddingTop: "8px", marginTop: "8px" }}>
+                              <button onClick={() => handleEditRewardClick(r)} className="secondary-btn" style={{ padding: "6px 12px", fontSize: "11px", flex: 1, justifyContent: "center" }}>Editar</button>
+                              <button onClick={() => setDeleteRewardTarget(r.id)} className="danger-btn" style={{ padding: "6px 12px", fontSize: "11px", flex: 1, justifyContent: "center" }}>Eliminar</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+
+                  {/* ADD/EDIT REWARD MODAL */}
+                  <AnimatePresence>
+                    {showAddReward && (
+                      <div className="modal-backdrop">
+                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="modal-card" style={{ maxWidth: "420px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                            <h3 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>
+                              {editingReward ? "Editar Premio" : "Añadir Nuevo Premio"}
+                            </h3>
+                            <button className="mobile-toggle" onClick={() => setShowAddReward(false)}>✕</button>
+                          </div>
+
+                          <form onSubmit={handleSaveReward} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                            <div>
+                              <label className="kpi-card__label" style={{ marginBottom: "4px", display: "block" }}>Nombre del Premio</label>
+                              <input type="text" required value={rewardName} onChange={(e) => setRewardName(e.target.value)} className="input" placeholder="Ej. Corte de pelo gratis" />
+                            </div>
+
+                            <div>
+                              <label className="kpi-card__label" style={{ marginBottom: "4px", display: "block" }}>Condiciones / Descripción</label>
+                              <textarea value={rewardDesc} required onChange={(e) => setRewardDesc(e.target.value)} className="input" style={{ height: "60px", resize: "none" }} placeholder="Ej. Válido tras 10 visitas de lunes a jueves." />
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                              <div>
+                                <label className="kpi-card__label" style={{ marginBottom: "4px", display: "block" }}>Puntos requeridos (Opcional)</label>
+                                <input type="number" min="0" value={rewardPoints} onChange={(e) => setRewardPoints(e.target.value)} className="input" placeholder="Ej. 10" />
+                              </div>
+                              <div>
+                                <label className="kpi-card__label" style={{ marginBottom: "4px", display: "block" }}>Fecha de Validez (Opcional)</label>
+                                <input type="date" value={rewardValidUntil} onChange={(e) => setRewardValidUntil(e.target.value)} className="input" />
+                              </div>
+                            </div>
+
+                            <button type="submit" className="primary-btn" style={{ width: "100%", justifyContent: "center", marginTop: "10px", background: "linear-gradient(135deg, #f59e0b, #d97706)", border: "none" }}>
+                              <span>{editingReward ? "Guardar Cambios" : "Crear Premio"}</span>
+                            </button>
+                          </form>
+                        </motion.div>
+                      </div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* DELETE REWARD CONFIRMATION MODAL */}
+                  <AnimatePresence>
+                    {deleteRewardTarget !== null && (
+                      <div className="modal-backdrop">
+                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="modal-card" style={{ maxWidth: "400px", textAlign: "center" }}>
+                          <AlertCircle size={48} color="#f43f5e" style={{ margin: "0 auto 16px" }} />
+                          <h3 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "8px" }}>¿Eliminar Premio?</h3>
+                          <p style={{ color: "var(--text-muted)", marginBottom: "24px" }}>Esta acción no se puede deshacer. Los clientes ya no verán este premio disponible.</p>
+                          <div style={{ display: "flex", gap: "12px" }}>
+                            <button onClick={() => setDeleteRewardTarget(null)} className="secondary-btn" style={{ flex: 1, justifyContent: "center" }}>Cancelar</button>
+                            <button onClick={confirmDeleteReward} className="danger-btn" style={{ flex: 1, justifyContent: "center" }}>Sí, eliminar</button>
+                          </div>
+                        </motion.div>
+                      </div>
+                    )}
+                  </AnimatePresence>
 
                   {/* ADD/EDIT SERVICE MODAL */}
                   <AnimatePresence>

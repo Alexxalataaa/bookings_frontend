@@ -42,6 +42,17 @@ export interface Service {
   duration: number; // in minutes
 }
 
+export interface Reward {
+  id: number;
+  name: string;
+  description: string;
+  validUntil?: string;
+  pointsRequired?: number;
+  isActive: boolean;
+  createdAt: string;
+  business?: Business;
+}
+
 export interface Booking {
   id: number;
   date: string;
@@ -452,7 +463,52 @@ export async function updateSpot(id: number, data: Partial<Spot>): Promise<Spot>
 }
 
 export async function deleteSpot(id: number): Promise<void> {
-  await authedFetch<void>(`${API_URL}/spots/${id}`, { method: "DELETE" });
+  const res = await fetchWithAuth(`${API_URL}/spots/${id}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Failed to delete spot");
+}
+
+// ----------------------------------------------------
+// REWARDS
+// ----------------------------------------------------
+
+export async function getRewards(businessId?: number): Promise<Reward[]> {
+  const url = businessId ? `${API_URL}/rewards?businessId=${businessId}` : `${API_URL}/rewards`;
+  const res = await fetchWithAuth(url);
+  if (!res.ok) throw new Error("Failed to fetch rewards");
+  return res.json();
+}
+
+export async function getReward(id: number): Promise<Reward> {
+  const res = await fetchWithAuth(`${API_URL}/rewards/${id}`);
+  if (!res.ok) throw new Error("Failed to fetch reward");
+  return res.json();
+}
+
+export async function createReward(data: Partial<Reward> & { businessId: number }): Promise<Reward> {
+  const res = await fetchWithAuth(`${API_URL}/rewards`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to create reward");
+  return res.json();
+}
+
+export async function updateReward(id: number, data: Partial<Reward>): Promise<Reward> {
+  const res = await fetchWithAuth(`${API_URL}/rewards/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to update reward");
+  return res.json();
+}
+
+export async function deleteReward(id: number): Promise<void> {
+  const res = await fetchWithAuth(`${API_URL}/rewards/${id}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Failed to delete reward");
 }
 
 // --- WHATSAPP SIMULATOR ---
