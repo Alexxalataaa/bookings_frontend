@@ -80,12 +80,14 @@ export default function DashboardClient() {
 
   // Client view States
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
+  const [clientBookings, setClientBookings] = useState<Booking[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [selectedCity, setSelectedCity] = useState("Todos");
 
   // Superadmin view States
   const [superadminBusinesses, setSuperadminBusinesses] = useState<Business[]>([]);
+  const [superadminBookings, setSuperadminBookings] = useState<Booking[]>([]);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [superadminSearch, setSuperadminSearch] = useState("");
   const [businessBookingSearch, setBusinessBookingSearch] = useState("");
@@ -259,13 +261,21 @@ export default function DashboardClient() {
           await selectBusiness(businesses[0]);
         }
       } else if (role === "client") {
-        // Fetch all active businesses for searching
-        const businesses = await getBusinesses();
+        // Fetch all active businesses for searching and client's own bookings
+        const [businesses, myBookings] = await Promise.all([
+          getBusinesses(),
+          getAppointments().catch(() => [])
+        ]);
         setAllBusinesses(businesses);
+        setClientBookings(myBookings);
       } else if (role === "superadmin") {
-        // Fetch all businesses for platform management
-        const businesses = await getBusinessesAll();
+        // Fetch all businesses and all bookings for platform management
+        const [businesses, allBookings] = await Promise.all([
+          getBusinessesAll(),
+          getAppointments().catch(() => [])
+        ]);
         setSuperadminBusinesses(businesses);
+        setSuperadminBookings(allBookings);
 
         // Mock audit logs
         setActivityLogs([
@@ -683,6 +693,46 @@ export default function DashboardClient() {
                   </button>
                 </div>
               )}
+            </div>
+          </section>
+
+          {/* Client KPI Totals */}
+          <section className="kpi-grid">
+            <div className="kpi-card">
+              <p className="kpi-card__label">Mis Reservas</p>
+              <h3 className="kpi-card__value">{clientBookings.length}</h3>
+              <p className="kpi-card__meta kpi-card__meta--positive">
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  <TrendingUp size={14} /> Total histórico
+                </span>
+              </p>
+            </div>
+            <div className="kpi-card">
+              <p className="kpi-card__label">Confirmadas</p>
+              <h3 className="kpi-card__value" style={{ color: "var(--success)" }}>
+                {clientBookings.filter(b => b.status === "confirmed" || b.status === "paid").length}
+              </h3>
+              <p className="kpi-card__meta kpi-card__meta--positive">
+                <span>Activas y pagadas</span>
+              </p>
+            </div>
+            <div className="kpi-card">
+              <p className="kpi-card__label">Canceladas</p>
+              <h3 className="kpi-card__value" style={{ color: clientBookings.filter(b => b.status === "cancelled").length > 0 ? "var(--accent)" : "var(--success)" }}>
+                {clientBookings.filter(b => b.status === "cancelled").length}
+              </h3>
+              <p className="kpi-card__meta" style={{ color: "var(--text-muted)" }}>
+                <span>Historial de bajas</span>
+              </p>
+            </div>
+            <div className="kpi-card">
+              <p className="kpi-card__label">Negocios Visitados</p>
+              <h3 className="kpi-card__value">
+                {new Set(clientBookings.map(b => b.businessId)).size}
+              </h3>
+              <p className="kpi-card__meta kpi-card__meta--positive">
+                <span>Locales únicos</span>
+              </p>
             </div>
           </section>
 
@@ -1341,14 +1391,20 @@ export default function DashboardClient() {
               <p className="kpi-card__meta" style={{ color: "var(--text-muted)" }}>Salones registrados</p>
             </div>
             <div className="kpi-card" style={{ background: "rgba(255, 255, 255, 0.02)" }}>
-              <p className="kpi-card__label">Volumen de Transacciones</p>
-              <h3 className="kpi-card__value" style={{ color: "var(--primary)" }}>3.840 €</h3>
-              <p className="kpi-card__meta kpi-card__meta--positive">Semana actual</p>
+              <p className="kpi-card__label">Reservas Globales</p>
+              <h3 className="kpi-card__value" style={{ color: "var(--primary)" }}>{superadminBookings.length}</h3>
+              <p className="kpi-card__meta kpi-card__meta--positive">
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  <TrendingUp size={14} /> Total plataforma
+                </span>
+              </p>
             </div>
             <div className="kpi-card" style={{ background: "rgba(255, 255, 255, 0.02)" }}>
-              <p className="kpi-card__label">Logs de Auditoría</p>
-              <h3 className="kpi-card__value">{activityLogs.length}</h3>
-              <p className="kpi-card__meta" style={{ color: "var(--text-muted)" }}>Acciones registradas</p>
+              <p className="kpi-card__label">Tasa de Cancelación</p>
+              <h3 className="kpi-card__value" style={{ color: superadminBookings.length > 0 && (superadminBookings.filter(b => b.status === "cancelled").length / superadminBookings.length * 100) > 10 ? "var(--accent)" : "var(--success)" }}>
+                {superadminBookings.length > 0 ? ((superadminBookings.filter(b => b.status === "cancelled").length / superadminBookings.length) * 100).toFixed(1) : "0.0"}%
+              </h3>
+              <p className="kpi-card__meta" style={{ color: "var(--text-muted)" }}>Global plataforma</p>
             </div>
             <div className="kpi-card" style={{ background: "rgba(255, 255, 255, 0.02)" }}>
               <p className="kpi-card__label">Estado del Sistema</p>
