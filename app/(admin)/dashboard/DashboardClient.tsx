@@ -50,6 +50,7 @@ import {
   LogOut,
   UserCheck,
   AlertTriangle,
+  AlertCircle,
   CheckCircle,
   FileCode2,
   ChevronRight,
@@ -1229,7 +1230,7 @@ export default function DashboardClient() {
                               color: "#fff"
                             }}
                             itemStyle={{ fontWeight: "bold" }}
-                            formatter={(value: any, name: string) => [`${value} reservas`, name]}
+                            formatter={(value: any, name: any) => [`${value} reservas`, String(name)]}
                           />
                           <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" fill="var(--text)" style={{ fontSize: "38px", fontWeight: "900" }}>
                             {getServicesChartData().reduce((acc, curr) => acc + curr.value, 0)}

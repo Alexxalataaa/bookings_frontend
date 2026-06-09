@@ -1,6 +1,8 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getClientMetrics } from "@/lib/api";
+import { getClientMetrics } from "@/lib/api/getClientMetrics";
 import { formatCurrency } from "@/lib/utils";
 import { Calendar as CalendarIcon, CreditCard, TrendingUp, BarChart, Users, CheckCircle, AlertCircle } from "lucide-react";
 import KpiCard from "@/components/kpi/KpiCard";

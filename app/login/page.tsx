@@ -127,6 +127,12 @@ export default function LoginPage() {
       localStorage.setItem("auth_token", data.token);
       localStorage.setItem("user_role", data.user.role);
       localStorage.setItem("user_name", data.user.fullName);
+      if (data.user?.id) {
+        localStorage.setItem("user_id", String(data.user.id));
+      }
+      if (data.user?.id) {
+        localStorage.setItem("user_id", String(data.user.id));
+      }
       router.replace("/dashboard");
     } catch (err: any) {
       setError("Error al conectar con la API de BookFlow: " + err.message);
