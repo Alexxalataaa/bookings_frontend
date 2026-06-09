@@ -45,12 +45,13 @@ export interface Service {
 export interface Reward {
   id: number;
   name: string;
-  description: string;
+  description?: string;
   validUntil?: string;
   pointsRequired?: number;
   isActive: boolean;
   createdAt: string;
   business?: Business;
+  winner?: UserProfile;
 }
 
 export interface Booking {
@@ -229,6 +230,44 @@ export async function updateService(id: number, data: Partial<Service>): Promise
 
 export async function deleteService(id: number): Promise<void> {
   await authedFetch<void>(`${API_URL}/services/${id}`, { method: "DELETE" });
+}
+
+// --- REWARDS ---
+export async function getRewards(businessId?: number): Promise<Reward[]> {
+  const url = businessId ? `${API_URL}/rewards?businessId=${businessId}` : `${API_URL}/rewards`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error("No se pudieron cargar los premios.");
+  }
+  return res.json();
+}
+
+export async function getReward(id: number): Promise<Reward> {
+  const res = await fetch(`${API_URL}/rewards/${id}`, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error("No se pudo cargar el premio.");
+  }
+  return res.json();
+}
+
+export async function createReward(data: Partial<Reward> & { businessId: number }): Promise<Reward> {
+  return authedFetch<Reward>(`${API_URL}/rewards`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateReward(id: number, data: Partial<Reward>): Promise<Reward> {
+  return authedFetch<Reward>(`${API_URL}/rewards/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteReward(id: number): Promise<void> {
+  await authedFetch<void>(`${API_URL}/rewards/${id}`, { method: "DELETE" });
 }
 
 function normalizeBooking(b: Booking): Booking {
@@ -463,53 +502,27 @@ export async function updateSpot(id: number, data: Partial<Spot>): Promise<Spot>
 }
 
 export async function deleteSpot(id: number): Promise<void> {
-  const res = await fetchWithAuth(`${API_URL}/spots/${id}`, {
+  await authedFetch<void>(`${API_URL}/spots/${id}`, {
     method: "DELETE",
   });
-  if (!res.ok) throw new Error("Failed to delete spot");
 }
 
 // ----------------------------------------------------
 // REWARDS
 // ----------------------------------------------------
 
-export async function getRewards(businessId?: number): Promise<Reward[]> {
-  const url = businessId ? `${API_URL}/rewards?businessId=${businessId}` : `${API_URL}/rewards`;
-  const res = await fetchWithAuth(url);
-  if (!res.ok) throw new Error("Failed to fetch rewards");
-  return res.json();
-}
 
-export async function getReward(id: number): Promise<Reward> {
-  const res = await fetchWithAuth(`${API_URL}/rewards/${id}`);
-  if (!res.ok) throw new Error("Failed to fetch reward");
-  return res.json();
-}
 
-export async function createReward(data: Partial<Reward> & { businessId: number }): Promise<Reward> {
-  const res = await fetchWithAuth(`${API_URL}/rewards`, {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error("Failed to create reward");
-  return res.json();
-}
 
-export async function updateReward(id: number, data: Partial<Reward>): Promise<Reward> {
-  const res = await fetchWithAuth(`${API_URL}/rewards/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error("Failed to update reward");
-  return res.json();
-}
 
-export async function deleteReward(id: number): Promise<void> {
-  const res = await fetchWithAuth(`${API_URL}/rewards/${id}`, {
-    method: "DELETE",
-  });
-  if (!res.ok) throw new Error("Failed to delete reward");
-}
+
+
+
+
+
+
+
+
 
 // --- WHATSAPP SIMULATOR ---
 export async function whatsappSimulate(phoneNumber: string, message: string): Promise<{ reply: string }> {

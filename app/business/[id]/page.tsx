@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { addMinutes, format, isBefore, setHours, setMinutes } from "date-fns";
 import { useRouter } from "next/navigation";
 import { 
@@ -13,7 +13,9 @@ import {
   getSpots,
   Spot,
   getRewards,
-  Reward
+  getProfile,
+  Reward,
+  UserProfile,
 } from "@/lib/api";
 import { CheckCircle2, ChevronLeft, Calendar as CalendarIcon, MapPin, Building, Activity, ChevronRight, X, Phone, Mail, Clock, Star, Globe, Sparkles, CheckCircle, AlertCircle, ArrowLeft, Gift } from "lucide-react";
 import Image from "next/image";
@@ -23,12 +25,12 @@ import { es } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface PageProps {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }
 
 export default function BusinessLandingPage({ params }: PageProps) {
   const router = useRouter();
-  const { id } = use(params);
+  const { id } = params;
 
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,6 +50,7 @@ export default function BusinessLandingPage({ params }: PageProps) {
 
   // Rewards state
   const [rewards, setRewards] = useState<Reward[]>([]);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   
   // Guest booking forms (in case client is not logged in)
   const [isGuest, setIsGuest] = useState(true);
@@ -62,6 +65,11 @@ export default function BusinessLandingPage({ params }: PageProps) {
     if (token) {
       setIsGuest(false);
       setGuestName(localStorage.getItem("user_name") || "");
+      getProfile()
+        .then((profile) => setCurrentUser(profile))
+        .catch(() => setCurrentUser(null));
+    } else {
+      setCurrentUser(null);
     }
 
     fetchBusinessData();
@@ -207,6 +215,9 @@ export default function BusinessLandingPage({ params }: PageProps) {
           localStorage.setItem("auth_token", token!);
           localStorage.setItem("user_role", loginData.user.role);
           localStorage.setItem("user_name", loginData.user.fullName);
+          if (loginData.user?.id) {
+            localStorage.setItem("user_id", String(loginData.user.id));
+          }
           setIsGuest(false);
         }
       }
@@ -338,6 +349,51 @@ export default function BusinessLandingPage({ params }: PageProps) {
               <p style={{ color: "#94a3b8", fontSize: "15px", lineHeight: 1.6, margin: 0 }}>
                 {business.description || "Bienvenidos a nuestro salón premium. Ofrecemos servicios profesionales con personal altamente capacitado, garantizando una experiencia exclusiva y de máxima calidad en cada cita."}
               </p>
+            </section>
+
+            {/* Rewards & Prizes */}
+            <section className="section-card" style={{ background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.05)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                <h3 style={{ fontSize: "20px", fontWeight: "bold", margin: 0 }}>Premios y Beneficios</h3>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#94a3b8", fontSize: "14px" }}>
+                  <Gift size={18} />
+                  <span>Descubre qué puedes ganar</span>
+                </div>
+              </div>
+
+              {rewards.length === 0 ? (
+                <p style={{ color: "#94a3b8", fontSize: "14px", margin: 0 }}>No hay premios activos en este momento. Vuelve pronto para ver nuevas recompensas.</p>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
+                  {rewards.map((reward) => {
+                    const winnerText = reward.winner ? (currentUser?.id === reward.winner.id ? "¡Enhorabuena! Este premio es para ti." : "Este premio ya ha sido entregado a otro cliente.") : "Premio activo. Participa para ganar.";
+                    return (
+                      <div key={reward.id} style={{ padding: "18px", borderRadius: "18px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+                          <Gift size={18} color="#fbbf24" />
+                          <h4 style={{ margin: 0, fontSize: "16px", fontWeight: "bold" }}>{reward.name}</h4>
+                        </div>
+                        <p style={{ margin: "0 0 12px 0", color: "#cbd5e1", fontSize: "14px", lineHeight: 1.6 }}>{reward.description || "Recompensa especial disponible para clientes."}</p>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "12px" }}>
+                          {reward.pointsRequired ? (
+                            <span style={{ padding: "6px 10px", borderRadius: "999px", background: "rgba(248, 113, 113, 0.1)", color: "#f97316", fontSize: "12px", fontWeight: "700" }}>
+                              {reward.pointsRequired} pts necesarios
+                            </span>
+                          ) : null}
+                          {reward.validUntil ? (
+                            <span style={{ padding: "6px 10px", borderRadius: "999px", background: "rgba(59, 130, 246, 0.1)", color: "#60a5fa", fontSize: "12px", fontWeight: "700" }}>
+                              Válido hasta {reward.validUntil}
+                            </span>
+                          ) : null}
+                        </div>
+                        <div style={{ padding: "14px", borderRadius: "14px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", fontSize: "13px", color: currentUser?.id === reward.winner?.id ? "#a3e635" : reward.winner ? "#f8fafc" : "#cbd5e1" }}>
+                          {winnerText}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
 
             {/* Public Services List */}
