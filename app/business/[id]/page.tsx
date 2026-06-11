@@ -1,26 +1,15 @@
 "use client";
 
+import React from "react";
 import { useEffect, useState, useMemo } from "react";
 import { addMinutes, format, isBefore, setHours, setMinutes } from "date-fns";
 import { useRouter } from "next/navigation";
-import { 
-  getBusiness, 
-  createAppointment, 
-  BookingStatus, 
-  Business, 
-  Service, 
-  createPayment,
-  getSpots,
-  Spot,
-  getRewards,
-  getProfile,
-  Reward,
-  UserProfile,
-} from "@/lib/api";
+
 import { CheckCircle2, ChevronLeft, Calendar as CalendarIcon, MapPin, Building, Activity, ChevronRight, X, Phone, Mail, Clock, Star, Globe, Sparkles, CheckCircle, AlertCircle, ArrowLeft, Gift } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import ChatWidget from "@/components/ChatWidget";
+import { getBusiness, getRewards, getSpots, createAppointment, createPayment, getProfile, Business, Service, Spot, Reward, UserProfile, BookingStatus } from "@/lib/api";
 import { es } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -30,7 +19,7 @@ interface PageProps {
 
 export default function BusinessLandingPage({ params }: PageProps) {
   const router = useRouter();
-  const { id } = params;
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
@@ -143,7 +132,7 @@ export default function BusinessLandingPage({ params }: PageProps) {
 
       try {
         const rData = await getRewards(data.id);
-        setRewards(rData.filter(r => r.isActive));
+        setRewards(rData.filter(r => r.isActive && (!r.validUntil || new Date(r.validUntil) >= new Date())));
       } catch (err) {
         console.error("Error fetching rewards:", err);
       }
@@ -179,7 +168,7 @@ export default function BusinessLandingPage({ params }: PageProps) {
         }
 
         // Auto-login or register guest
-        const regRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/auth/register`, {
+        const regRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3005"}/auth/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -196,14 +185,14 @@ export default function BusinessLandingPage({ params }: PageProps) {
         let loginToken = "";
         if (regRes.ok && regData.tempToken) {
           // Verify automatically for frictionless guest experience
-          await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/auth/verify-register`, {
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3005"}/auth/verify-register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ tempToken: regData.tempToken, code: "123456" }), // simulated code
           });
         }
         
-        const loginRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/auth/login`, {
+        const loginRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3005"}/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username: guestEmail, password: "GuestPassword123!" }),
