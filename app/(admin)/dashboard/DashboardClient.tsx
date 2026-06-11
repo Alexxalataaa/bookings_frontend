@@ -89,6 +89,7 @@ export default function DashboardClient() {
   // Client view States
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
   const [clientBookings, setClientBookings] = useState<Booking[]>([]);
+  const [clientRewards, setClientRewards] = useState<Reward[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [selectedCity, setSelectedCity] = useState("Todos");
@@ -228,6 +229,8 @@ export default function DashboardClient() {
   const [rewardDesc, setRewardDesc] = useState("");
   const [rewardPoints, setRewardPoints] = useState("");
   const [rewardValidUntil, setRewardValidUntil] = useState("");
+  const [rewardAssignTarget, setRewardAssignTarget] = useState<Reward | null>(null);
+  const [rewardWinnerId, setRewardWinnerId] = useState<number | null>(null);
 
   // Business settings form state
   const [showSettingsTab, setShowSettingsTab] = useState(false);
@@ -278,12 +281,14 @@ export default function DashboardClient() {
         }
       } else if (role === "client") {
         // Fetch all active businesses for searching and client's own bookings
-        const [businesses, myBookings] = await Promise.all([
+        const [businesses, myBookings, rewards] = await Promise.all([
           getBusinesses(),
-          getAppointments().catch(() => [])
+          getAppointments().catch(() => []),
+          getRewards().catch(() => []),
         ]);
         setAllBusinesses(businesses);
         setClientBookings(myBookings);
+        setClientRewards((rewards as Reward[]).filter(r => r.isActive && (!r.validUntil || new Date(r.validUntil) >= new Date())));
       } else if (role === "superadmin") {
         // Fetch all businesses and all bookings for platform management
         const [businesses, allBookings] = await Promise.all([
@@ -567,8 +572,56 @@ export default function DashboardClient() {
     setRewardDesc(reward.description || "");
     setRewardPoints(reward.pointsRequired ? reward.pointsRequired.toString() : "");
     setRewardValidUntil(reward.validUntil || "");
+    setRewardAssignTarget(null);
+    setRewardWinnerId(reward.winner?.id ?? null);
     setShowAddReward(true);
   };
+
+  const handleAssignRewardClick = (reward: Reward) => {
+    setRewardAssignTarget(reward);
+    setRewardWinnerId(reward.winner?.id ?? null);
+  };
+
+  const confirmAssignReward = async () => {
+    if (!rewardAssignTarget || !selectedBusiness) return;
+    try {
+      await updateReward(rewardAssignTarget.id, {
+        winnerId: rewardWinnerId,
+      });
+      const rewards = await getRewards(selectedBusiness.id);
+      setBusinessRewards(rewards);
+    } catch (err) {
+      console.error("Error asignando ganador de recompensa:", err);
+    } finally {
+      setRewardAssignTarget(null);
+      setRewardWinnerId(null);
+    }
+  };
+
+  const toggleRewardActive = async (reward: Reward) => {
+    if (!selectedBusiness) return;
+    try {
+      await updateReward(reward.id, { isActive: !reward.isActive });
+      const rewards = await getRewards(selectedBusiness.id);
+      setBusinessRewards(rewards);
+    } catch (err) {
+      console.error("Error cambiando estado de recompensa:", err);
+    }
+  };
+
+  const uniqueCustomers = useMemo(() => {
+    const map = new Map<number, { id: number; label: string }>();
+    businessBookings.forEach((booking) => {
+      const customerId = booking.user?.id ?? booking.customerId;
+      if (!map.has(customerId)) {
+        map.set(customerId, {
+          id: customerId,
+          label: booking.user?.fullName || `Cliente #${booking.customerId}`,
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [businessBookings]);
 
   // Booking Actions (Confirm / Cancel)
   const handleConfirmBooking = async (bookingId: number) => {
@@ -850,6 +903,56 @@ export default function DashboardClient() {
                 </select>
               </div>
             </div>
+          </section>
+
+          {/* Client Rewards Section */}
+          <section className="section-card" style={{ marginTop: "24px", background: "rgba(255, 255, 255, 0.01)", border: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+              <div>
+                <h3 style={{ fontSize: "20px", fontWeight: "700", margin: 0 }}>Recompensas disponibles</h3>
+                <p style={{ margin: "8px 0 0 0", color: "var(--text-muted)", fontSize: "14px" }}>
+                  Explora premios activos, sus condiciones y si ya te ha tocado alguno.
+                </p>
+              </div>
+              <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+                {clientRewards.length} premio{clientRewards.length === 1 ? "" : "s"}
+              </span>
+            </div>
+            {clientRewards.length === 0 ? (
+              <p style={{ marginTop: "16px", color: "var(--text-muted)" }}>No hay recompensas activas disponibles en este momento.</p>
+            ) : (
+              <div className="customer-grid" style={{ marginTop: "20px" }}>
+                {clientRewards.map((reward) => {
+                  const isWinner = reward.winner?.id === Number(localStorage.getItem("user_id"));
+                  return (
+                    <div key={reward.id} className="customer-card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "14px", minHeight: "240px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: "18px", fontWeight: "bold" }}>{reward.name}</h4>
+                          <p style={{ margin: "4px 0 0 0", color: "var(--text-muted)", fontSize: "13px" }}>{reward.description || "Condiciones del premio"}</p>
+                        </div>
+                        <span style={{ color: isWinner ? "#a3e635" : reward.winner ? "#f8fafc" : "#60a5fa", fontSize: "12px", fontWeight: 700, padding: "6px 10px", background: isWinner ? "rgba(163,230,53,0.12)" : reward.winner ? "rgba(248,250,252,0.08)" : "rgba(96,165,250,0.12)", borderRadius: "12px" }}>
+                          {isWinner ? "¡Ganaste!" : reward.winner ? "Asignado" : "Disponible"}
+                        </span>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", color: "var(--text-muted)", fontSize: "13px" }}>
+                        <div>
+                          <strong>Puntos necesarios</strong>
+                          <p style={{ margin: "6px 0 0 0" }}>{reward.pointsRequired ?? "N/A"}</p>
+                        </div>
+                        <div>
+                          <strong>Validez</strong>
+                          <p style={{ margin: "6px 0 0 0" }}>{reward.validUntil ? `Hasta ${reward.validUntil}` : "Sin fecha límite"}</p>
+                        </div>
+                      </div>
+                      <p style={{ margin: 0, color: isWinner ? "#a3e635" : "var(--text-muted)", fontSize: "13px" }}>
+                        {isWinner ? "¡Felicidades! Ya tienes este premio asignado." : reward.winner ? `Premio entregado a ${reward.winner.fullName || 'otro cliente'}.` : "Reclama este premio cumpliendo las condiciones del negocio."}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </section>
 
           {/* Business Cards Grid */}
@@ -1336,9 +1439,27 @@ export default function DashboardClient() {
                               ) : null}
                             </div>
 
-                            <div style={{ display: "flex", gap: "8px", borderTop: "1px solid var(--border)", paddingTop: "8px", marginTop: "8px" }}>
-                              <button onClick={() => handleEditRewardClick(r)} className="secondary-btn" style={{ padding: "6px 12px", fontSize: "11px", flex: 1, justifyContent: "center" }}>Editar</button>
-                              <button onClick={() => setDeleteRewardTarget(r.id)} className="danger-btn" style={{ padding: "6px 12px", fontSize: "11px", flex: 1, justifyContent: "center" }}>Eliminar</button>
+                            <div style={{ display: "grid", gap: "8px", borderTop: "1px solid var(--border)", paddingTop: "8px", marginTop: "8px" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                <span style={{ fontSize: "12px", fontWeight: 700, color: r.isActive ? "#22c55e" : "#f97316" }}>
+                                  {r.isActive ? "Activo" : "Inactivo"}
+                                </span>
+                                {r.winner ? (
+                                  <span style={{ fontSize: "12px", color: "#a3e635" }}>Ganador: {r.winner.fullName || `ID ${r.winner.id}`}</span>
+                                ) : (
+                                  <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Sin ganador asignado</span>
+                                )}
+                              </div>
+                              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                                <button onClick={() => handleEditRewardClick(r)} className="secondary-btn" style={{ padding: "6px 12px", fontSize: "11px", flex: 1, justifyContent: "center" }}>Editar</button>
+                                <button onClick={() => handleAssignRewardClick(r)} className="primary-btn" style={{ padding: "6px 12px", fontSize: "11px", flex: 1, justifyContent: "center", background: "linear-gradient(135deg, #3b82f6, #2563eb)", border: "none" }}>
+                                  {r.winner ? "Cambiar ganador" : "Asignar ganador"}
+                                </button>
+                                <button onClick={() => setDeleteRewardTarget(r.id)} className="danger-btn" style={{ padding: "6px 12px", fontSize: "11px", flex: 1, justifyContent: "center" }}>Eliminar</button>
+                                <button onClick={() => toggleRewardActive(r)} className="secondary-btn" style={{ padding: "6px 12px", fontSize: "11px", flex: 1, justifyContent: "center" }}>
+                                  {r.isActive ? "Desactivar" : "Activar"}
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -1400,6 +1521,39 @@ export default function DashboardClient() {
                           <div style={{ display: "flex", gap: "12px" }}>
                             <button onClick={() => setDeleteRewardTarget(null)} className="secondary-btn" style={{ flex: 1, justifyContent: "center" }}>Cancelar</button>
                             <button onClick={confirmDeleteReward} className="danger-btn" style={{ flex: 1, justifyContent: "center" }}>Sí, eliminar</button>
+                          </div>
+                        </motion.div>
+                      </div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* ASSIGN REWARD WINNER MODAL */}
+                  <AnimatePresence>
+                    {rewardAssignTarget && (
+                      <div className="modal-backdrop">
+                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="modal-card" style={{ maxWidth: "420px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                            <h3 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>Asignar ganador para "{rewardAssignTarget.name}"</h3>
+                            <button className="mobile-toggle" onClick={() => setRewardAssignTarget(null)}>✕</button>
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                            <p style={{ color: "var(--text-muted)", fontSize: "14px", margin: 0 }}>
+                              Selecciona al cliente que ha ganado este premio. Solo se mostrarán clientes con reservaciones en tu negocio.
+                            </p>
+                            {uniqueCustomers.length === 0 ? (
+                              <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>Aún no hay clientes registrados en las reservas para este negocio.</p>
+                            ) : (
+                              <select value={rewardWinnerId ?? ""} onChange={(e) => setRewardWinnerId(e.target.value ? Number(e.target.value) : null)} className="select">
+                                <option value="">Sin ganador</option>
+                                {uniqueCustomers.map((customer) => (
+                                  <option key={customer.id} value={customer.id}>{customer.label}</option>
+                                ))}
+                              </select>
+                            )}
+                            <div style={{ display: "flex", gap: "12px" }}>
+                              <button onClick={() => setRewardAssignTarget(null)} className="secondary-btn" style={{ flex: 1, justifyContent: "center" }}>Cancelar</button>
+                              <button onClick={confirmAssignReward} className="primary-btn" style={{ flex: 1, justifyContent: "center" }}>Guardar ganador</button>
+                            </div>
                           </div>
                         </motion.div>
                       </div>

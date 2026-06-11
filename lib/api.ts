@@ -124,7 +124,7 @@ export interface CreatePaymentDto {
   businessId?: number;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3005";
 
 // Standard Auth Fetch Wrapper
 async function authedFetch<T>(input: string, init: RequestInit = {}): Promise<T> {
@@ -161,6 +161,13 @@ async function authedFetch<T>(input: string, init: RequestInit = {}): Promise<T>
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(text || 'Request failed');
+  }
+
+  // If response has no content, return undefined to avoid JSON parse errors
+  const contentLength = res.headers.get('content-length');
+  const contentType = res.headers.get('content-type') || '';
+  if (res.status === 204 || contentLength === '0' || !contentType.includes('application/json')) {
+    return undefined as unknown as T;
   }
 
   return (await res.json()) as T;
@@ -250,7 +257,7 @@ export async function getReward(id: number): Promise<Reward> {
   return res.json();
 }
 
-export async function createReward(data: Partial<Reward> & { businessId: number }): Promise<Reward> {
+export async function createReward(data: Partial<Reward> & { businessId: number; winnerId?: number }): Promise<Reward> {
   return authedFetch<Reward>(`${API_URL}/rewards`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -258,7 +265,7 @@ export async function createReward(data: Partial<Reward> & { businessId: number 
   });
 }
 
-export async function updateReward(id: number, data: Partial<Reward>): Promise<Reward> {
+export async function updateReward(id: number, data: Partial<Reward> & { winnerId?: number | null }): Promise<Reward> {
   return authedFetch<Reward>(`${API_URL}/rewards/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },

@@ -27,7 +27,8 @@ export default function NotificationBell() {
   useEffect(() => {
     setMounted(true);
     // Connect to WebSocket gateway
-    const socket: Socket = io("http://localhost:3000");
+    const socketUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3005";
+    const socket: Socket = io(socketUrl);
     
     socket.on("notification", (data: Notification) => {
       setNotifications((prev) => [data, ...prev].slice(0, 50)); // Keep last 50

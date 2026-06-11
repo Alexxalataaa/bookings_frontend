@@ -99,7 +99,7 @@ npm install
 Crea un archivo `.env.local` en la raíz con la URL del backend:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_API_URL=http://localhost:3005
 ```
 
 Si el backend corre en otro puerto, cámbialo aquí. Si modificas este archivo, reinicia el servidor de desarrollo.
