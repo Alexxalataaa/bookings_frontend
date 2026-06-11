@@ -22,6 +22,8 @@ import {
   createReward,
   updateReward,
   deleteReward,
+  getAllClientProgress,
+  getProfile,
   Business,
   Service,
   Reward,
@@ -90,6 +92,7 @@ export default function DashboardClient() {
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
   const [clientBookings, setClientBookings] = useState<Booking[]>([]);
   const [clientRewards, setClientRewards] = useState<Reward[]>([]);
+  const [clientProgress, setClientProgress] = useState<{ [businessId: number]: number }>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [selectedCity, setSelectedCity] = useState("Todos");
@@ -281,14 +284,38 @@ export default function DashboardClient() {
         }
       } else if (role === "client") {
         // Fetch all active businesses for searching and client's own bookings
-        const [businesses, myBookings, rewards] = await Promise.all([
+        const [businesses, myBookings, rewards, profile] = await Promise.all([
           getBusinesses(),
           getAppointments().catch(() => []),
           getRewards().catch(() => []),
+          getProfile().catch(() => null),
         ]);
+        
+        // Store user_id if not already set
+        if (profile && profile.id) {
+          localStorage.setItem("user_id", String(profile.id));
+        }
+
+        let progressMap: { [businessId: number]: number } = {};
+        const userId = profile?.id || Number(localStorage.getItem("user_id"));
+        if (userId) {
+          try {
+            const progresses = await getAllClientProgress(userId);
+            console.log("[Krono] Client progress loaded:", progresses);
+            progresses.forEach((p: any) => {
+              if (p.business && p.business.id) {
+                progressMap[p.business.id] = p.points;
+              }
+            });
+          } catch(err) {
+            console.error("[Krono] Error loading client progress:", err);
+          }
+        }
+
         setAllBusinesses(businesses);
         setClientBookings(myBookings);
         setClientRewards((rewards as Reward[]).filter(r => r.isActive && (!r.validUntil || new Date(r.validUntil) >= new Date())));
+        setClientProgress(progressMap);
       } else if (role === "superadmin") {
         // Fetch all businesses and all bookings for platform management
         const [businesses, allBookings] = await Promise.all([
@@ -871,6 +898,32 @@ export default function DashboardClient() {
             </div>
           </section>
 
+          {/* --- Mis Puntos Section --- */}
+          <section className="section-card" style={{ background: "linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, rgba(163, 230, 53, 0.04) 100%)", border: "1px solid rgba(163,230,53,0.15)" }}>
+            <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
+              <Gift size={20} style={{ color: "#a3e635" }} /> Mis Puntos de Fidelización
+            </h3>
+            {Object.keys(clientProgress).length === 0 ? (
+              <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>
+                Aún no tienes puntos. Reserva y paga citas para empezar a acumular puntos en cada negocio.
+              </p>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "14px" }}>
+                {Object.entries(clientProgress).map(([bId, points]) => {
+                  const b = allBusinesses.find(x => x.id === Number(bId));
+                  if (!b) return null;
+                  return (
+                    <div key={bId} style={{ padding: "18px", borderRadius: "14px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(163,230,53,0.2)", display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <span style={{ fontSize: "13px", color: "var(--text-muted)", fontWeight: 600 }}>{b.name}</span>
+                      <span style={{ fontSize: "32px", fontWeight: 900, color: "#a3e635", lineHeight: 1 }}>{points}</span>
+                      <span style={{ fontSize: "12px", color: "#84cc16" }}>puntos acumulados</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
           {/* Search bar & Filters */}
           <section className="section-card" style={{ background: "rgba(255, 255, 255, 0.01)", border: "1px solid var(--border)" }}>
             <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
@@ -923,16 +976,20 @@ export default function DashboardClient() {
             ) : (
               <div className="customer-grid" style={{ marginTop: "20px" }}>
                 {clientRewards.map((reward) => {
+                  const points = clientProgress[reward.business?.id || 0] || 0;
+                  const isUnlocked = reward.pointsRequired && points >= reward.pointsRequired;
                   const isWinner = reward.winner?.id === Number(localStorage.getItem("user_id"));
+                  
                   return (
                     <div key={reward.id} className="customer-card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "14px", minHeight: "240px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
                         <div>
                           <h4 style={{ margin: 0, fontSize: "18px", fontWeight: "bold" }}>{reward.name}</h4>
                           <p style={{ margin: "4px 0 0 0", color: "var(--text-muted)", fontSize: "13px" }}>{reward.description || "Condiciones del premio"}</p>
+                          <p style={{ margin: "4px 0 0 0", color: "#6366f1", fontSize: "13px", fontWeight: "bold" }}>Tienes: {points} pts</p>
                         </div>
-                        <span style={{ color: isWinner ? "#a3e635" : reward.winner ? "#f8fafc" : "#60a5fa", fontSize: "12px", fontWeight: 700, padding: "6px 10px", background: isWinner ? "rgba(163,230,53,0.12)" : reward.winner ? "rgba(248,250,252,0.08)" : "rgba(96,165,250,0.12)", borderRadius: "12px" }}>
-                          {isWinner ? "¡Ganaste!" : reward.winner ? "Asignado" : "Disponible"}
+                        <span style={{ color: isWinner || isUnlocked ? "#a3e635" : reward.winner ? "#f8fafc" : "#60a5fa", fontSize: "12px", fontWeight: 700, padding: "6px 10px", background: isWinner || isUnlocked ? "rgba(163,230,53,0.12)" : reward.winner ? "rgba(248,250,252,0.08)" : "rgba(96,165,250,0.12)", borderRadius: "12px" }}>
+                          {isWinner ? "¡Ganaste!" : (isUnlocked ? "¡Desbloqueado!" : (reward.winner ? "Asignado" : "Disponible"))}
                         </span>
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", color: "var(--text-muted)", fontSize: "13px" }}>
@@ -945,8 +1002,8 @@ export default function DashboardClient() {
                           <p style={{ margin: "6px 0 0 0" }}>{reward.validUntil ? `Hasta ${reward.validUntil}` : "Sin fecha límite"}</p>
                         </div>
                       </div>
-                      <p style={{ margin: 0, color: isWinner ? "#a3e635" : "var(--text-muted)", fontSize: "13px" }}>
-                        {isWinner ? "¡Felicidades! Ya tienes este premio asignado." : reward.winner ? `Premio entregado a ${reward.winner.fullName || 'otro cliente'}.` : "Reclama este premio cumpliendo las condiciones del negocio."}
+                      <p style={{ margin: 0, color: isWinner || isUnlocked ? "#a3e635" : "var(--text-muted)", fontSize: "13px" }}>
+                        {isWinner ? "¡Felicidades! Ya tienes este premio asignado." : (isUnlocked ? "¡PREMIO DESBLOQUEADO! Muestra esto en el local." : (reward.winner ? `Premio entregado a ${reward.winner.fullName || 'otro cliente'}.` : "Reclama este premio cumpliendo las condiciones del negocio."))}
                       </p>
                     </div>
                   );

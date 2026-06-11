@@ -226,6 +226,9 @@ export default function LoginPage() {
         localStorage.setItem("auth_token", data.token);
         localStorage.setItem("user_role", data.user.role);
         localStorage.setItem("user_name", data.user.fullName);
+        if (data.user?.id) {
+          localStorage.setItem("user_id", String(data.user.id));
+        }
         router.replace("/dashboard");
       } catch (err: any) {
         setError(err.message || "Error al iniciar sesión");
@@ -332,6 +335,9 @@ export default function LoginPage() {
       localStorage.setItem("auth_token", loginData.token);
       localStorage.setItem("user_role", loginData.user.role);
       localStorage.setItem("user_name", loginData.user.fullName);
+      if (loginData.user?.id) {
+        localStorage.setItem("user_id", String(loginData.user.id));
+      }
 
       setShow2fa(false);
       setSuccessMessage(null);

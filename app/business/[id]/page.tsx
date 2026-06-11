@@ -9,17 +9,18 @@ import { CheckCircle2, ChevronLeft, Calendar as CalendarIcon, MapPin, Building, 
 import Image from "next/image";
 import Link from "next/link";
 import ChatWidget from "@/components/ChatWidget";
-import { getBusiness, getRewards, getSpots, createAppointment, createPayment, getProfile, Business, Service, Spot, Reward, UserProfile, BookingStatus } from "@/lib/api";
+import { getBusiness, getRewards, getSpots, createAppointment, createPayment, getProfile, getClientProgress, Business, Service, Spot, Reward, UserProfile, BookingStatus } from "@/lib/api";
 import { es } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function BusinessLandingPage({ params }: PageProps) {
   const router = useRouter();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const unwrappedParams = React.use(params);
+  const id = Array.isArray(unwrappedParams.id) ? unwrappedParams.id[0] : unwrappedParams.id;
 
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,6 +32,7 @@ export default function BusinessLandingPage({ params }: PageProps) {
   const [selectedTime, setSelectedTime] = useState("");
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"local" | "card">("local");
 
   // Visual map states
   const [spots, setSpots] = useState<Spot[]>([]);
@@ -40,6 +42,7 @@ export default function BusinessLandingPage({ params }: PageProps) {
   // Rewards state
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [clientPoints, setClientPoints] = useState(0);
   
   // Guest booking forms (in case client is not logged in)
   const [isGuest, setIsGuest] = useState(true);
@@ -136,6 +139,20 @@ export default function BusinessLandingPage({ params }: PageProps) {
       } catch (err) {
         console.error("Error fetching rewards:", err);
       }
+
+      // Fetch client progress if logged in
+      const token = localStorage.getItem("auth_token");
+      if (token) {
+        try {
+          const profile = await getProfile();
+          if (profile && profile.id) {
+            const progress = await getClientProgress(data.id, profile.id);
+            setClientPoints(progress.points);
+          }
+        } catch (err) {
+          console.error("Error fetching client progress:", err);
+        }
+      }
     } catch (err: any) {
       console.error(err);
       setError("No se pudo cargar la información del negocio.");
@@ -212,10 +229,12 @@ export default function BusinessLandingPage({ params }: PageProps) {
       }
 
       // Create booking on backend
+      const bookingStatus = paymentMethod === "card" ? "paid" : "pending";
+      
       const bookingData = {
         date: selectedDate,
         time: selectedTime,
-        status: "pending" as BookingStatus,
+        status: bookingStatus as BookingStatus,
         businessId: business!.id,
         serviceName: selectedService.name,
         serviceId: selectedService.id,
@@ -226,12 +245,13 @@ export default function BusinessLandingPage({ params }: PageProps) {
 
       // Create associated payment on backend
       await createPayment({
-        clientName: guestName || "Cliente",
+        clientName: isGuest ? guestName : (currentUser?.fullName || "Cliente"),
         businessName: business!.name,
         amount: selectedService.price,
-        method: "Tarjeta",
+        method: paymentMethod === "card" ? "Tarjeta (Simulado)" : "Pago en Local",
         date: selectedDate,
         businessId: business!.id,
+        status: bookingStatus
       });
 
       setBookingSuccess(true);
@@ -344,9 +364,9 @@ export default function BusinessLandingPage({ params }: PageProps) {
             <section className="section-card" style={{ background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.05)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                 <h3 style={{ fontSize: "20px", fontWeight: "bold", margin: 0 }}>Premios y Beneficios</h3>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#94a3b8", fontSize: "14px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: currentUser ? "#a3e635" : "#94a3b8", fontSize: "14px", fontWeight: currentUser ? "bold" : "normal" }}>
                   <Gift size={18} />
-                  <span>Descubre qué puedes ganar</span>
+                  <span>{currentUser ? `Tienes ${clientPoints} puntos acumulados` : "Inicia sesión para ganar puntos"}</span>
                 </div>
               </div>
 
@@ -355,7 +375,11 @@ export default function BusinessLandingPage({ params }: PageProps) {
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
                   {rewards.map((reward) => {
-                    const winnerText = reward.winner ? (currentUser?.id === reward.winner.id ? "¡Enhorabuena! Este premio es para ti." : "Este premio ya ha sido entregado a otro cliente.") : "Premio activo. Participa para ganar.";
+                    const isUnlocked = reward.pointsRequired && clientPoints >= reward.pointsRequired;
+                    const winnerText = reward.winner 
+                      ? (currentUser?.id === reward.winner.id ? "¡Enhorabuena! Este premio es para ti." : "Este premio ya ha sido entregado a otro cliente.") 
+                      : (isUnlocked ? "¡PREMIO DESBLOQUEADO! Cumples los requisitos." : "Premio activo. Participa para ganar.");
+                      
                     return (
                       <div key={reward.id} style={{ padding: "18px", borderRadius: "18px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
@@ -375,7 +399,7 @@ export default function BusinessLandingPage({ params }: PageProps) {
                             </span>
                           ) : null}
                         </div>
-                        <div style={{ padding: "14px", borderRadius: "14px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", fontSize: "13px", color: currentUser?.id === reward.winner?.id ? "#a3e635" : reward.winner ? "#f8fafc" : "#cbd5e1" }}>
+                        <div style={{ padding: "14px", borderRadius: "14px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", fontSize: "13px", color: currentUser?.id === reward.winner?.id || isUnlocked ? "#a3e635" : reward.winner ? "#f8fafc" : "#cbd5e1", fontWeight: isUnlocked ? "bold" : "normal" }}>
                           {winnerText}
                         </div>
                       </div>
@@ -683,6 +707,26 @@ export default function BusinessLandingPage({ params }: PageProps) {
                     <span>{authError}</span>
                   </div>
                 )}
+
+                <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "16px", marginBottom: "20px" }}>
+                  <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#818cf8", fontWeight: "bold" }}>Método de Pago</p>
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("local")}
+                      style={{ flex: 1, padding: "10px", borderRadius: "8px", border: paymentMethod === "local" ? "2px solid #6366f1" : "1px solid rgba(255,255,255,0.1)", background: paymentMethod === "local" ? "rgba(99,102,241,0.1)" : "transparent", color: paymentMethod === "local" ? "#fff" : "#cbd5e1", fontSize: "13px", cursor: "pointer", transition: "all 0.2s" }}
+                    >
+                      Pagar después
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("card")}
+                      style={{ flex: 1, padding: "10px", borderRadius: "8px", border: paymentMethod === "card" ? "2px solid #10b981" : "1px solid rgba(255,255,255,0.1)", background: paymentMethod === "card" ? "rgba(16,185,129,0.1)" : "transparent", color: paymentMethod === "card" ? "#fff" : "#cbd5e1", fontSize: "13px", cursor: "pointer", transition: "all 0.2s" }}
+                    >
+                      Tarjeta (Simular pago)
+                    </button>
+                  </div>
+                </div>
 
                 {bookingSuccess ? (
                   <div style={{ textAlign: "center", padding: "12px 0", color: "#10b981", fontWeight: "bold", fontSize: "14px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>

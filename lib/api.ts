@@ -518,6 +518,18 @@ export async function deleteSpot(id: number): Promise<void> {
 // REWARDS
 // ----------------------------------------------------
 
+export async function getClientProgress(businessId: number, userId: number): Promise<{ points: number }> {
+  return authedFetch<{ points: number }>(`${API_URL}/rewards/progress?businessId=${businessId}&userId=${userId}`, { cache: "no-store" });
+}
+
+export async function getAllClientProgress(userId: number): Promise<any[]> {
+  return authedFetch<any[]>(`${API_URL}/rewards/my-progress?userId=${userId}`, { cache: "no-store" });
+}
+
+export async function getUnlockedRewards(businessId: number, userId: number): Promise<Reward[]> {
+  return authedFetch<Reward[]>(`${API_URL}/rewards/unlocked?businessId=${businessId}&userId=${userId}`, { cache: "no-store" });
+}
+
 
 
 
