@@ -107,8 +107,8 @@ export default function LoginPage() {
     let demoPass = "client123!";
     
     if (selectedRole === "business") {
-      demoUser = "owner1";
-      demoPass = "owner123!";
+      demoUser = "empresa";
+      demoPass = "1234";
     } else if (selectedRole === "superadmin") {
       demoUser = "admin";
       demoPass = "admin";
