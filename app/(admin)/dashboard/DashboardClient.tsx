@@ -51,6 +51,7 @@ import {
   UserCheck,
   AlertTriangle,
   AlertCircle,
+  Dice5,
   CheckCircle,
   FileCode2,
   ChevronRight,
@@ -59,7 +60,8 @@ import {
   DollarSign,
   Briefcase,
   Eye,
-  ArrowLeft
+  ArrowLeft,
+  MoreVertical
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ChatWidget from "@/components/ChatWidget";
@@ -94,6 +96,10 @@ export default function DashboardClient() {
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [selectedCity, setSelectedCity] = useState("Todos");
 
+  const clientPoints = useMemo(() => {
+    return clientBookings.filter(b => b.status === "confirmed" || b.status === "paid").length * 10;
+  }, [clientBookings]);
+
   // Superadmin view States
   const [superadminBusinesses, setSuperadminBusinesses] = useState<Business[]>([]);
   const [superadminBookings, setSuperadminBookings] = useState<Booking[]>([]);
@@ -102,6 +108,7 @@ export default function DashboardClient() {
   const [businessBookingSearch, setBusinessBookingSearch] = useState("");
   const [deleteServiceTarget, setDeleteServiceTarget] = useState<number | null>(null);
   const [deleteBusinessTarget, setDeleteBusinessTarget] = useState<{ id: number; name: string } | null>(null);
+  const [activeRewardActionId, setActiveRewardActionId] = useState<number | null>(null);
 
   const filteredSuperadminBusinesses = useMemo(() => {
     if (!superadminSearch.trim()) return superadminBusinesses;
@@ -231,6 +238,23 @@ export default function DashboardClient() {
   const [rewardValidUntil, setRewardValidUntil] = useState("");
   const [rewardAssignTarget, setRewardAssignTarget] = useState<Reward | null>(null);
   const [rewardWinnerId, setRewardWinnerId] = useState<number | null>(null);
+  const [isSpinningReward, setIsSpinningReward] = useState(false);
+  const [spinResultCustomer, setSpinResultCustomer] = useState<{ id: number; label: string } | null>(null);
+  const [slotTrackOffset, setSlotTrackOffset] = useState(0);
+  const [slotTrackTransition, setSlotTrackTransition] = useState(false);
+  const [wheelRotation, setWheelRotation] = useState(0);
+  const [scrollingName, setScrollingName] = useState("");
+
+  const wheelSegmentColors = [
+    "#7c3aed",
+    "#2563eb",
+    "#10b981",
+    "#f59e0b",
+    "#ef4444",
+    "#0ea5e9",
+    "#ec4899",
+    "#22c55e",
+  ];
 
   // Business settings form state
   const [showSettingsTab, setShowSettingsTab] = useState(false);
@@ -577,9 +601,45 @@ export default function DashboardClient() {
     setShowAddReward(true);
   };
 
-  const handleAssignRewardClick = (reward: Reward) => {
+  const handleAssignRewardClick = (reward: Reward, autoSpin = false) => {
     setRewardAssignTarget(reward);
     setRewardWinnerId(reward.winner?.id ?? null);
+    setIsSpinningReward(false);
+    setSpinResultCustomer(reward.winner ? { id: reward.winner.id, label: reward.winner.fullName } : null);
+    setSlotTrackOffset(0);
+    setSlotTrackTransition(false);
+
+    if (autoSpin) {
+      setTimeout(() => {
+        pickRandomRewardWinner();
+      }, 500);
+    }
+  };
+
+  const pickRandomRewardWinner = () => {
+    if (uniqueCustomers.length === 0 || isSpinningReward) return;
+
+    setIsSpinningReward(true);
+    setSpinResultCustomer(null);
+    setRewardWinnerId(null);
+
+    let cycleIndex = 0;
+    const intervalId = window.setInterval(() => {
+      if (uniqueCustomers.length > 0) {
+        setScrollingName(uniqueCustomers[cycleIndex % uniqueCustomers.length].label);
+        cycleIndex++;
+      }
+    }, 70);
+
+    window.setTimeout(() => {
+      window.clearInterval(intervalId);
+      const randomIndex = Math.floor(Math.random() * uniqueCustomers.length);
+      const customer = uniqueCustomers[randomIndex];
+      setRewardWinnerId(customer.id);
+      setSpinResultCustomer(customer);
+      setIsSpinningReward(false);
+      setScrollingName("");
+    }, 2600);
   };
 
   const confirmAssignReward = async () => {
@@ -595,6 +655,8 @@ export default function DashboardClient() {
     } finally {
       setRewardAssignTarget(null);
       setRewardWinnerId(null);
+      setIsSpinningReward(false);
+      setSpinResultCustomer(null);
     }
   };
 
@@ -622,6 +684,39 @@ export default function DashboardClient() {
     });
     return Array.from(map.values());
   }, [businessBookings]);
+
+  const selectedRewardCustomer = useMemo(() => {
+    return uniqueCustomers.find((customer) => customer.id === rewardWinnerId) || null;
+  }, [uniqueCustomers, rewardWinnerId]);
+
+  const canSaveWinner = Boolean(rewardWinnerId);
+
+  const rewardWheelGradient = useMemo(() => {
+    if (uniqueCustomers.length === 0) {
+      return "radial-gradient(circle at center, rgba(99, 102, 241, 0.18), rgba(15, 23, 42, 0.65))";
+    }
+
+    const colors = uniqueCustomers.map((_, idx) => wheelSegmentColors[idx % wheelSegmentColors.length]);
+    const stops = colors
+      .map((color, idx) => {
+        const start = (idx * 100) / colors.length;
+        const end = ((idx + 1) * 100) / colors.length;
+        return `${color} ${start}% ${end}%`;
+      })
+      .join(", ");
+    return `conic-gradient(${stops})`;
+  }, [uniqueCustomers]);
+
+  const slotTrackItems = useMemo(() => {
+    if (uniqueCustomers.length === 0) return [];
+    const repeatCount = 8;
+    return Array.from({ length: repeatCount }, (_, repeatIndex) =>
+      uniqueCustomers.map((customer) => ({
+        ...customer,
+        key: `${repeatIndex}-${customer.id}`,
+      }))
+    ).flat();
+  }, [uniqueCustomers]);
 
   // Booking Actions (Confirm / Cancel)
   const handleConfirmBooking = async (bookingId: number) => {
@@ -796,6 +891,387 @@ export default function DashboardClient() {
         .recharts-area-area {
           filter: drop-shadow(0 15px 25px rgba(99, 102, 241, 0.3));
         }
+
+        /* Gestión de Premios y Recompensas premium redesign */
+        .reward-card {
+          background: rgba(30, 41, 59, 0.45) !important;
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(245, 158, 11, 0.3) !important;
+          border-radius: 20px !important;
+          padding: 24px !important;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .reward-card:hover {
+          transform: translateY(-4px);
+          border-color: rgba(245, 158, 11, 0.6) !important;
+          box-shadow: 0 15px 35px rgba(245, 158, 11, 0.15), 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .reward-card__title {
+          font-size: 22px;
+          font-weight: 800;
+          color: #f59e0b;
+          margin: 0;
+          letter-spacing: -0.01em;
+        }
+        .reward-card__desc {
+          color: #e2e8f0;
+          font-size: 15px;
+          line-height: 1.5;
+          margin: 0;
+        }
+        .reward-badge--req {
+          background: rgba(245, 158, 11, 0.15);
+          border: 1px solid rgba(245, 158, 11, 0.35);
+          color: #f59e0b;
+          padding: 6px 14px;
+          border-radius: 8px;
+          font-size: 12px;
+          font-weight: 700;
+        }
+        .reward-badge--val {
+          background: rgba(6, 182, 212, 0.15);
+          border: 1px solid rgba(6, 182, 212, 0.35);
+          color: #22d3ee;
+          padding: 6px 14px;
+          border-radius: 8px;
+          font-size: 12px;
+          font-weight: 700;
+        }
+        .reward-winner-box {
+          border: 1px dashed rgba(255, 255, 255, 0.18);
+          border-radius: 16px;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          text-align: center;
+          background: rgba(255, 255, 255, 0.01);
+        }
+        .reward-winner-text {
+          font-size: 14px;
+          color: #94a3b8;
+          font-style: italic;
+          margin: 0;
+        }
+        .reward-btn--assign {
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: #f1f5f9;
+          border-radius: 9999px !important;
+          padding: 10px 20px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .reward-btn--assign:hover {
+          background: rgba(255, 255, 255, 0.12);
+          border-color: rgba(255, 255, 255, 0.3);
+          transform: translateY(-1px);
+        }
+        .reward-btn--raffle {
+          background: rgba(245, 158, 11, 0.05);
+          border: 1px solid #d97706;
+          color: #f59e0b;
+          border-radius: 9999px !important;
+          padding: 10px 20px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          transition: all 0.2s;
+        }
+        .reward-btn--raffle:hover {
+          background: rgba(245, 158, 11, 0.12);
+          transform: translateY(-1px);
+          box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+        }
+        .reward-btn--edit {
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          color: #e2e8f0;
+          border-radius: 9999px !important;
+          padding: 12px 24px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex: 1;
+        }
+        .reward-btn--edit:hover {
+          background: rgba(255, 255, 255, 0.15);
+          border-color: rgba(255, 255, 255, 0.25);
+          transform: translateY(-2px);
+        }
+        .reward-btn--delete {
+          background: linear-gradient(135deg, #f43f5e, #e11d48);
+          border: none;
+          color: white;
+          border-radius: 9999px !important;
+          padding: 12px 24px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex: 1;
+          box-shadow: 0 4px 12px rgba(244, 63, 94, 0.2);
+        }
+        .reward-btn--delete:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px rgba(244, 63, 94, 0.45), 0 0 12px rgba(244, 63, 94, 0.2);
+        }
+
+        /* Delete confirmation modal styling */
+        .delete-confirm-icon {
+          width: 60px;
+          height: 60px;
+          border-radius: 50%;
+          border: 3px solid #f43f5e;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 20px;
+          color: #f43f5e;
+          font-weight: 800;
+          font-size: 32px;
+          background: rgba(244, 63, 94, 0.1);
+          animation: pulse-border 2s infinite;
+        }
+        @keyframes pulse-border {
+          0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4); }
+          70% { box-shadow: 0 0 0 10px rgba(244, 63, 94, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
+        }
+        .delete-confirm-title {
+          font-size: 22px;
+          font-weight: bold;
+          color: #ffffff;
+          margin-bottom: 12px;
+        }
+        .delete-confirm-text {
+          color: #94a3b8;
+          font-size: 15px;
+          line-height: 1.5;
+          margin-bottom: 28px;
+        }
+        .delete-confirm-btn--cancel {
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: #ffffff;
+          padding: 12px 24px;
+          border-radius: 9999px !important;
+          font-weight: 600;
+          font-size: 15px;
+          cursor: pointer;
+          flex: 1;
+          transition: all 0.2s;
+        }
+        .delete-confirm-btn--cancel:hover {
+          background: rgba(255, 255, 255, 0.15);
+          transform: translateY(-1px);
+        }
+        .delete-confirm-btn--delete {
+          background: linear-gradient(135deg, #f43f5e, #e11d48);
+          border: none;
+          color: #ffffff;
+          padding: 12px 24px;
+          border-radius: 9999px !important;
+          font-weight: 600;
+          font-size: 15px;
+          cursor: pointer;
+          flex: 1;
+          box-shadow: 0 8px 20px rgba(244, 63, 94, 0.3);
+          transition: all 0.2s;
+        }
+        .delete-confirm-btn--delete:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 12px 24px rgba(244, 63, 94, 0.55);
+        }
+
+        /* Simplified Sorteo Modal styling */
+        .sorteo-modal-card {
+          max-width: 400px !important;
+          background: rgba(30, 41, 59, 0.75) !important;
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(245, 158, 11, 0.35) !important;
+          box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5) !important;
+          border-radius: 24px !important;
+          padding: 36px 28px !important;
+          text-align: center;
+          position: relative;
+        }
+        .sorteo-highlight-box {
+          background: rgba(15, 23, 42, 0.4);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 18px;
+          padding: 24px 16px;
+          margin: 24px 0;
+          min-height: 80px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .sorteo-winner-name {
+          font-size: 24px;
+          font-weight: 800;
+          color: #f59e0b;
+          margin: 0;
+          letter-spacing: -0.01em;
+          text-align: center;
+        }
+        .sorteo-btn--action {
+          width: 100%;
+          border-radius: 9999px !important;
+          padding: 14px 28px;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+        .sorteo-btn--primary {
+          background: linear-gradient(135deg, #6366f1, #4f46e5);
+          border: none;
+          color: white;
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+        .sorteo-btn--primary:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
+        }
+        .sorteo-btn--spinning {
+          background: rgba(255, 255, 255, 0.08) !important;
+          border: 1px solid rgba(255, 255, 255, 0.12) !important;
+          color: #94a3b8 !important;
+          cursor: not-allowed;
+        }
+        .sorteo-btn--secondary {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          color: #e2e8f0;
+        }
+        .sorteo-btn--secondary:hover {
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Red close button for modals */
+        .modal-close-btn {
+          position: absolute;
+          top: 20px;
+          right: 20px;
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: rgba(244, 63, 94, 0.1);
+          border: 1px solid rgba(244, 63, 94, 0.2);
+          color: #f43f5e;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          font-weight: bold;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          z-index: 10;
+        }
+        .modal-close-btn:hover {
+          background: #f43f5e;
+          color: white;
+          transform: scale(1.1);
+          box-shadow: 0 0 10px rgba(244, 63, 94, 0.4);
+        }
+
+        /* Client Reward Card Redesign */
+        .client-reward-card {
+          background: rgba(30, 41, 59, 0.4) !important;
+          backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.08) !important;
+          border-radius: 20px !important;
+          padding: 24px !important;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          transition: all 0.3s ease;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+          position: relative;
+        }
+        .client-reward-card:hover {
+          transform: translateY(-4px);
+          border-color: rgba(99, 102, 241, 0.4) !important;
+          box-shadow: 0 15px 35px rgba(99, 102, 241, 0.15), 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .client-reward-card--won {
+          border: 1px solid rgba(163, 230, 53, 0.4) !important;
+          box-shadow: 0 10px 30px rgba(163, 230, 53, 0.15);
+        }
+        .client-reward-card--won:hover {
+          border-color: rgba(163, 230, 53, 0.7) !important;
+          box-shadow: 0 15px 35px rgba(163, 230, 53, 0.25), 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .client-reward-card--claimed {
+          opacity: 0.75;
+          border-color: rgba(255, 255, 255, 0.04) !important;
+        }
+        .client-reward-title {
+          font-size: 20px;
+          font-weight: 800;
+          color: #f8fafc;
+          margin: 0;
+        }
+        .client-reward-desc {
+          color: #94a3b8;
+          font-size: 14px;
+          line-height: 1.5;
+          margin: 0;
+        }
+        .client-reward-badge {
+          font-size: 11px;
+          font-weight: 800;
+          padding: 6px 12px;
+          border-radius: 8px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .client-reward-badge--won {
+          background: rgba(163, 230, 53, 0.15);
+          color: #a3e635;
+          border: 1px solid rgba(163, 230, 53, 0.3);
+        }
+        .client-reward-badge--claimed {
+          background: rgba(255, 255, 255, 0.08);
+          color: #cbd5e1;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .client-reward-badge--available {
+          background: rgba(6, 182, 212, 0.15);
+          color: #22d3ee;
+          border: 1px solid rgba(6, 182, 212, 0.35);
+        }
       `}</style>
 
       {/* -------------------- 1. CLIENT VIEWS -------------------- */}
@@ -921,36 +1397,99 @@ export default function DashboardClient() {
             {clientRewards.length === 0 ? (
               <p style={{ marginTop: "16px", color: "var(--text-muted)" }}>No hay recompensas activas disponibles en este momento.</p>
             ) : (
-              <div className="customer-grid" style={{ marginTop: "20px" }}>
-                {clientRewards.map((reward) => {
-                  const isWinner = reward.winner?.id === Number(localStorage.getItem("user_id"));
-                  return (
-                    <div key={reward.id} className="customer-card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "14px", minHeight: "240px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
-                        <div>
-                          <h4 style={{ margin: 0, fontSize: "18px", fontWeight: "bold" }}>{reward.name}</h4>
-                          <p style={{ margin: "4px 0 0 0", color: "var(--text-muted)", fontSize: "13px" }}>{reward.description || "Condiciones del premio"}</p>
+              <div>
+                {/* Banner de puntos */}
+                <div style={{
+                  background: "linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(245, 158, 11, 0.06) 100%)",
+                  border: "1px solid rgba(99, 102, 241, 0.18)",
+                  borderRadius: "20px",
+                  padding: "20px 24px",
+                  marginBottom: "20px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "16px",
+                  flexWrap: "wrap"
+                }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: "16px", fontWeight: "bold", color: "#f8fafc", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <Sparkles size={16} style={{ color: "#f59e0b" }} /> Puntos de Fidelidad Acumulados
+                    </h4>
+                    <p style={{ margin: "4px 0 0 0", color: "var(--text-muted)", fontSize: "13px" }}>
+                      Obtienes 10 puntos por cada reserva confirmada o pagada en este portal. ¡Acumula puntos para ganar!
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.25)", padding: "10px 20px", borderRadius: "14px" }}>
+                    <span style={{ fontSize: "13px", fontWeight: "bold", color: "var(--text-muted)" }}>Tus Puntos:</span>
+                    <strong style={{ fontSize: "24px", fontWeight: "900", color: "#f59e0b" }}>{clientPoints} pts</strong>
+                  </div>
+                </div>
+
+                <div className="customer-grid">
+                  {clientRewards.map((reward) => {
+                    const isWinner = reward.winner?.id === Number(localStorage.getItem("user_id"));
+                    const hasPoints = clientPoints >= (reward.pointsRequired ?? 0);
+                    const pointsDiff = (reward.pointsRequired ?? 0) - clientPoints;
+
+                    let cardClass = "client-reward-card";
+                    if (isWinner) cardClass += " client-reward-card--won";
+                    else if (reward.winner) cardClass += " client-reward-card--claimed";
+
+                    return (
+                      <div key={reward.id} className={cardClass}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
+                          <div>
+                            <h4 className="client-reward-title" style={{ color: isWinner ? "#a3e635" : "var(--text)" }}>{reward.name}</h4>
+                            <p className="client-reward-desc" style={{ marginTop: "4px" }}>{reward.description || "Sin condiciones adicionales."}</p>
+                          </div>
+                          
+                          <span className={`client-reward-badge ${isWinner ? "client-reward-badge--won" : reward.winner ? "client-reward-badge--claimed" : "client-reward-badge--available"}`}>
+                            {isWinner ? "¡Te tocó! 🏆" : reward.winner ? "Reclamado" : "Disponible"}
+                          </span>
                         </div>
-                        <span style={{ color: isWinner ? "#a3e635" : reward.winner ? "#f8fafc" : "#60a5fa", fontSize: "12px", fontWeight: 700, padding: "6px 10px", background: isWinner ? "rgba(163,230,53,0.12)" : reward.winner ? "rgba(248,250,252,0.08)" : "rgba(96,165,250,0.12)", borderRadius: "12px" }}>
-                          {isWinner ? "¡Ganaste!" : reward.winner ? "Asignado" : "Disponible"}
-                        </span>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "12px", marginTop: "4px" }}>
+                          <div>
+                            <span style={{ display: "block", fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Puntos Necesarios</span>
+                            <strong style={{ display: "block", fontSize: "15px", marginTop: "4px", color: hasPoints ? "#10b981" : "#f59e0b" }}>
+                              {reward.pointsRequired ?? "0"} pts
+                            </strong>
+                          </div>
+                          <div>
+                            <span style={{ display: "block", fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700 }}>Validez</span>
+                            <strong style={{ display: "block", fontSize: "14px", marginTop: "4px", color: "#60a5fa" }}>
+                              {reward.validUntil ? reward.validUntil : "Sin límite"}
+                            </strong>
+                          </div>
+                        </div>
+
+                        <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "12px", marginTop: "auto" }}>
+                          {isWinner ? (
+                            <p style={{ margin: 0, color: "#a3e635", fontSize: "13px", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px" }}>
+                              🎉 ¡Felicidades! Este premio es tuyo. Acude al local para disfrutarlo.
+                            </p>
+                          ) : reward.winner ? (
+                            <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "13px" }}>
+                              Premio entregado a {reward.winner.fullName || `cliente #${reward.winner.id}`}.
+                            </p>
+                          ) : (
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              {hasPoints ? (
+                                <p style={{ margin: 0, color: "#10b981", fontSize: "13px", fontWeight: "600" }}>
+                                  ✓ ¡Tienes puntos suficientes! Entras en el sorteo.
+                                </p>
+                              ) : (
+                                <p style={{ margin: 0, color: "#f59e0b", fontSize: "13px" }}>
+                                  Te faltan <strong>{pointsDiff} pts</strong> para poder participar.
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", color: "var(--text-muted)", fontSize: "13px" }}>
-                        <div>
-                          <strong>Puntos necesarios</strong>
-                          <p style={{ margin: "6px 0 0 0" }}>{reward.pointsRequired ?? "N/A"}</p>
-                        </div>
-                        <div>
-                          <strong>Validez</strong>
-                          <p style={{ margin: "6px 0 0 0" }}>{reward.validUntil ? `Hasta ${reward.validUntil}` : "Sin fecha límite"}</p>
-                        </div>
-                      </div>
-                      <p style={{ margin: 0, color: isWinner ? "#a3e635" : "var(--text-muted)", fontSize: "13px" }}>
-                        {isWinner ? "¡Felicidades! Ya tienes este premio asignado." : reward.winner ? `Premio entregado a ${reward.winner.fullName || 'otro cliente'}.` : "Reclama este premio cumpliendo las condiciones del negocio."}
-                      </p>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             )}
           </section>
@@ -1075,10 +1614,10 @@ export default function DashboardClient() {
           <AnimatePresence>
             {showCreateBiz && (
               <div className="modal-backdrop">
-                <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="modal-card" style={{ maxWidth: "560px" }}>
+                <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="modal-card" style={{ maxWidth: "560px", position: "relative" }}>
+                  <button type="button" className="modal-close-btn" onClick={() => setShowCreateBiz(false)} aria-label="Cerrar">✕</button>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                     <h3 style={{ fontSize: "20px", fontWeight: "bold", margin: 0 }}>Registrar Nuevo Negocio</h3>
-                    <button className="mobile-toggle" onClick={() => setShowCreateBiz(false)}>✕</button>
                   </div>
 
                   <form onSubmit={handleCreateBusiness} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -1418,48 +1957,69 @@ export default function DashboardClient() {
                     {businessRewards.length === 0 ? (
                       <p style={{ color: "var(--text-muted)", fontSize: "14px", textAlign: "center", padding: "20px" }}>No has registrado ningún premio aún. ¡Incentiva a tus clientes creando uno!</p>
                     ) : (
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
                         {businessRewards.map(r => (
-                          <div key={r.id} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(245, 158, 11, 0.2)", borderRadius: "12px", padding: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                              <h4 style={{ fontSize: "15px", fontWeight: "bold", margin: 0, color: "#f59e0b" }}>{r.name}</h4>
+                          <div key={r.id} className="reward-card">
+                            <div>
+                              <h4 className="reward-card__title">{r.name}</h4>
                             </div>
-                            <p style={{ margin: 0, fontSize: "13px", color: "var(--text-muted)", flex: 1 }}>{r.description || "Sin condiciones específicas."}</p>
+                            <p className="reward-card__desc">{r.description || "Sin condiciones específicas."}</p>
                             
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "4px" }}>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                               {r.pointsRequired ? (
-                                <span style={{ background: "rgba(245, 158, 11, 0.1)", color: "#f59e0b", padding: "4px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: "bold" }}>
+                                <span className="reward-badge--req">
                                   Req: {r.pointsRequired} pts
                                 </span>
                               ) : null}
                               {r.validUntil ? (
-                                <span style={{ background: "rgba(99, 102, 241, 0.1)", color: "var(--primary)", padding: "4px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: "bold" }}>
+                                <span className="reward-badge--val">
                                   Válido hasta: {r.validUntil}
                                 </span>
                               ) : null}
                             </div>
 
-                            <div style={{ display: "grid", gap: "8px", borderTop: "1px solid var(--border)", paddingTop: "8px", marginTop: "8px" }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                                <span style={{ fontSize: "12px", fontWeight: 700, color: r.isActive ? "#22c55e" : "#f97316" }}>
-                                  {r.isActive ? "Activo" : "Inactivo"}
-                                </span>
-                                {r.winner ? (
-                                  <span style={{ fontSize: "12px", color: "#a3e635" }}>Ganador: {r.winner.fullName || `ID ${r.winner.id}`}</span>
-                                ) : (
-                                  <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Sin ganador asignado</span>
-                                )}
-                              </div>
-                              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                                <button onClick={() => handleEditRewardClick(r)} className="secondary-btn" style={{ padding: "6px 12px", fontSize: "11px", flex: 1, justifyContent: "center" }}>Editar</button>
-                                <button onClick={() => handleAssignRewardClick(r)} className="primary-btn" style={{ padding: "6px 12px", fontSize: "11px", flex: 1, justifyContent: "center", background: "linear-gradient(135deg, #3b82f6, #2563eb)", border: "none" }}>
-                                  {r.winner ? "Cambiar ganador" : "Asignar ganador"}
+                            {/* Contenedor del Ganador con borde discontinuo */}
+                            <div className="reward-winner-box">
+                              {r.winner ? (
+                                <p className="reward-winner-text" style={{ fontStyle: "normal", color: "#a3e635", fontWeight: "600" }}>
+                                  Ganador: {r.winner.fullName || `ID ${r.winner.id}`}
+                                </p>
+                              ) : (
+                                <p className="reward-winner-text">Sin ganador asignado</p>
+                              )}
+                              
+                              <div style={{ display: "flex", gap: "10px", width: "100%", justifyContent: "center" }}>
+                                <button 
+                                  onClick={() => handleAssignRewardClick(r)} 
+                                  className="reward-btn--assign"
+                                  style={{ flex: 1 }}
+                                >
+                                  {r.winner ? "Cambiar Ganador" : "Asignar Ganador"}
                                 </button>
-                                <button onClick={() => setDeleteRewardTarget(r.id)} className="danger-btn" style={{ padding: "6px 12px", fontSize: "11px", flex: 1, justifyContent: "center" }}>Eliminar</button>
-                                <button onClick={() => toggleRewardActive(r)} className="secondary-btn" style={{ padding: "6px 12px", fontSize: "11px", flex: 1, justifyContent: "center" }}>
-                                  {r.isActive ? "Desactivar" : "Activar"}
+                                <button 
+                                  onClick={() => handleAssignRewardClick(r, true)} 
+                                  className="reward-btn--raffle"
+                                  style={{ flex: 1 }}
+                                >
+                                  Sorteo <Gift size={14} />
                                 </button>
                               </div>
+                            </div>
+
+                            {/* Botones de acción inferiores */}
+                            <div style={{ display: "flex", gap: "12px", marginTop: "auto", paddingTop: "4px" }}>
+                              <button 
+                                onClick={() => handleEditRewardClick(r)} 
+                                className="reward-btn--edit"
+                              >
+                                Editar
+                              </button>
+                              <button 
+                                onClick={() => setDeleteRewardTarget(r.id)} 
+                                className="reward-btn--delete"
+                              >
+                                Eliminar
+                              </button>
                             </div>
                           </div>
                         ))}
@@ -1471,12 +2031,12 @@ export default function DashboardClient() {
                   <AnimatePresence>
                     {showAddReward && (
                       <div className="modal-backdrop">
-                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="modal-card" style={{ maxWidth: "420px" }}>
+                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="modal-card" style={{ maxWidth: "420px", position: "relative" }}>
+                          <button type="button" className="modal-close-btn" onClick={() => setShowAddReward(false)} aria-label="Cerrar">✕</button>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                             <h3 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>
                               {editingReward ? "Editar Premio" : "Añadir Nuevo Premio"}
                             </h3>
-                            <button className="mobile-toggle" onClick={() => setShowAddReward(false)}>✕</button>
                           </div>
 
                           <form onSubmit={handleSaveReward} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -1514,13 +2074,13 @@ export default function DashboardClient() {
                   <AnimatePresence>
                     {deleteRewardTarget !== null && (
                       <div className="modal-backdrop">
-                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="modal-card" style={{ maxWidth: "400px", textAlign: "center" }}>
-                          <AlertCircle size={48} color="#f43f5e" style={{ margin: "0 auto 16px" }} />
-                          <h3 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "8px" }}>¿Eliminar Premio?</h3>
-                          <p style={{ color: "var(--text-muted)", marginBottom: "24px" }}>Esta acción no se puede deshacer. Los clientes ya no verán este premio disponible.</p>
+                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="modal-card" style={{ maxWidth: "400px", textAlign: "center", border: "1px solid rgba(244, 63, 94, 0.2)" }}>
+                          <div className="delete-confirm-icon">!</div>
+                          <h3 className="delete-confirm-title">¿Eliminar Premio?</h3>
+                          <p className="delete-confirm-text">Esta acción no se puede deshacer. Los clientes ya no verán este premio disponible.</p>
                           <div style={{ display: "flex", gap: "12px" }}>
-                            <button onClick={() => setDeleteRewardTarget(null)} className="secondary-btn" style={{ flex: 1, justifyContent: "center" }}>Cancelar</button>
-                            <button onClick={confirmDeleteReward} className="danger-btn" style={{ flex: 1, justifyContent: "center" }}>Sí, eliminar</button>
+                            <button onClick={() => setDeleteRewardTarget(null)} className="delete-confirm-btn--cancel">Cancelar</button>
+                            <button onClick={confirmDeleteReward} className="delete-confirm-btn--delete">Sí, eliminar</button>
                           </div>
                         </motion.div>
                       </div>
@@ -1529,47 +2089,114 @@ export default function DashboardClient() {
 
                   {/* ASSIGN REWARD WINNER MODAL */}
                   <AnimatePresence>
-                    {rewardAssignTarget && (
-                      <div className="modal-backdrop">
-                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="modal-card" style={{ maxWidth: "420px" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>Asignar ganador para "{rewardAssignTarget.name}"</h3>
-                            <button className="mobile-toggle" onClick={() => setRewardAssignTarget(null)}>✕</button>
-                          </div>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                            <p style={{ color: "var(--text-muted)", fontSize: "14px", margin: 0 }}>
-                              Selecciona al cliente que ha ganado este premio. Solo se mostrarán clientes con reservaciones en tu negocio.
-                            </p>
-                            {uniqueCustomers.length === 0 ? (
-                              <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>Aún no hay clientes registrados en las reservas para este negocio.</p>
-                            ) : (
-                              <select value={rewardWinnerId ?? ""} onChange={(e) => setRewardWinnerId(e.target.value ? Number(e.target.value) : null)} className="select">
-                                <option value="">Sin ganador</option>
-                                {uniqueCustomers.map((customer) => (
-                                  <option key={customer.id} value={customer.id}>{customer.label}</option>
-                                ))}
-                              </select>
-                            )}
-                            <div style={{ display: "flex", gap: "12px" }}>
-                              <button onClick={() => setRewardAssignTarget(null)} className="secondary-btn" style={{ flex: 1, justifyContent: "center" }}>Cancelar</button>
-                              <button onClick={confirmAssignReward} className="primary-btn" style={{ flex: 1, justifyContent: "center" }}>Guardar ganador</button>
+                    {rewardAssignTarget && (() => {
+                      const displayWinnerName = isSpinningReward
+                        ? (scrollingName || "Seleccionando...")
+                        : (selectedRewardCustomer?.label ?? rewardAssignTarget.winner?.fullName ?? "Sin ganador");
+
+                      return (
+                        <div className="modal-backdrop">
+                          <motion.div 
+                            initial={{ scale: 0.95, opacity: 0 }} 
+                            animate={{ scale: 1, opacity: 1 }} 
+                            exit={{ scale: 0.95, opacity: 0 }} 
+                            className="modal-card sorteo-modal-card"
+                          >
+                            {/* Close button */}
+                            <button 
+                              className="mobile-toggle" 
+                              onClick={() => {
+                                if (!isSpinningReward) setRewardAssignTarget(null);
+                              }}
+                              style={{ position: "absolute", top: "16px", right: "20px", background: "none", border: "none", fontSize: "18px", color: "var(--text-muted)", cursor: "pointer" }}
+                              disabled={isSpinningReward}
+                            >
+                              ✕
+                            </button>
+
+                            {/* Dice Icon */}
+                            <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px" }}>
+                              <Dice5 size={48} style={{ color: "#e2e8f0" }} />
                             </div>
-                          </div>
-                        </motion.div>
-                      </div>
-                    )}
+
+                            {/* Titles */}
+                            <h3 style={{ fontSize: "22px", fontWeight: "bold", margin: "0 0 4px", color: "#f8fafc" }}>
+                              Sorteando Recompensa
+                            </h3>
+                            <p style={{ color: "var(--text-muted)", fontSize: "14px", margin: "0 0 20px" }}>
+                              Premio: {rewardAssignTarget.name}
+                            </p>
+
+                            {uniqueCustomers.length === 0 ? (
+                              <p style={{ color: "var(--text-muted)", fontSize: "14px", margin: "20px 0" }}>
+                                Aún no hay clientes registrados en las reservas para este negocio.
+                              </p>
+                            ) : (
+                              <div>
+                                {/* Highlight box */}
+                                <div className="sorteo-highlight-box">
+                                  <h4 className="sorteo-winner-name">
+                                    {displayWinnerName}
+                                  </h4>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "20px" }}>
+                                  {isSpinningReward ? (
+                                    <button className="sorteo-btn--action sorteo-btn--spinning" disabled style={{ border: "none" }}>
+                                      Girando...
+                                    </button>
+                                  ) : (
+                                    <>
+                                      <button 
+                                        type="button" 
+                                        onClick={pickRandomRewardWinner} 
+                                        className="sorteo-btn--action sorteo-btn--primary"
+                                        style={{ border: "none" }}
+                                      >
+                                        Girar
+                                      </button>
+
+                                      {/* Confirm Winner if one is selected */}
+                                      {selectedRewardCustomer && (
+                                        <button 
+                                          type="button" 
+                                          onClick={confirmAssignReward} 
+                                          className="sorteo-btn--action"
+                                          style={{ background: "linear-gradient(135deg, #10b981, #059669)", border: "none", color: "white", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.2)" }}
+                                        >
+                                          Asignar Ganador
+                                        </button>
+                                      )}
+
+                                      <button 
+                                        type="button" 
+                                        onClick={() => setRewardAssignTarget(null)} 
+                                        className="sorteo-btn--action sorteo-btn--secondary"
+                                      >
+                                        Cancelar
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </motion.div>
+                        </div>
+                      );
+                    })()}
                   </AnimatePresence>
 
                   {/* ADD/EDIT SERVICE MODAL */}
                   <AnimatePresence>
                     {showAddService && (
                       <div className="modal-backdrop">
-                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="modal-card" style={{ maxWidth: "420px" }}>
+                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="modal-card" style={{ maxWidth: "420px", position: "relative" }}>
+                          <button type="button" className="modal-close-btn" onClick={() => setShowAddService(false)} aria-label="Cerrar">✕</button>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                             <h3 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>
                               {editingService ? "Editar Servicio" : "Añadir Nuevo Servicio"}
                             </h3>
-                            <button className="mobile-toggle" onClick={() => setShowAddService(false)}>✕</button>
                           </div>
 
                           <form onSubmit={handleSaveService} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>

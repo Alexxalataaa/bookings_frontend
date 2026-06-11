@@ -169,21 +169,21 @@ export default function ChatWidget() {
         onClick={() => setIsChatOpen(!isChatOpen)}
         style={{
           position: "fixed",
-          bottom: "24px",
-          right: "24px",
+          bottom: "1.5rem",
+          right: "1.5rem",
           width: "60px",
           height: "60px",
           borderRadius: "50%",
           background: "#25d366",
-          border: "none",
+          border: "1px solid rgba(255,255,255,0.18)",
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
+          boxShadow: "0 10px 28px rgba(0,0,0,0.35)",
           zIndex: 10000,
           transition: "transform 0.2s",
-          transform: isChatOpen ? "scale(0.9)" : "scale(1)",
+          transform: isChatOpen ? "scale(0.95)" : "scale(1)",
         }}
       >
         {isChatOpen ? <X size={28} color="#fff" /> : <MessageCircle size={28} color="#fff" />}

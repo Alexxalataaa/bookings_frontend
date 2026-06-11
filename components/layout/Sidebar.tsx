@@ -163,19 +163,8 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean, onClose:
       <div style={{ marginTop: "auto", padding: "16px 16px 12px", display: "flex", flexDirection: "column", gap: "12px" }}>
         <button
           onClick={() => setShowAppearance((current) => !current)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            width: "100%",
-            gap: "10px",
-            padding: "12px 14px",
-            borderRadius: "12px",
-            background: "rgba(255,255,255,0.04)",
-            color: "var(--text)",
-            border: "1px solid var(--border)",
-            cursor: "pointer",
-          }}
+          className="admin-sidebar__link admin-sidebar__link--action"
+          style={{ justifyContent: "space-between", width: "100%", gap: "10px" }}
         >
           <span style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 700 }}>
             <Palette size={18} />

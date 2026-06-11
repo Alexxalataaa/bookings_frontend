@@ -3,7 +3,7 @@
 import React from "react";
 import { useEffect, useState, useMemo } from "react";
 import { addMinutes, format, isBefore, setHours, setMinutes } from "date-fns";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 
 import { CheckCircle2, ChevronLeft, Calendar as CalendarIcon, MapPin, Building, Activity, ChevronRight, X, Phone, Mail, Clock, Star, Globe, Sparkles, CheckCircle, AlertCircle, ArrowLeft, Gift } from "lucide-react";
 import Image from "next/image";
@@ -13,13 +13,10 @@ import { getBusiness, getRewards, getSpots, createAppointment, createPayment, ge
 import { es } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 
-interface PageProps {
-  params: { id: string };
-}
-
-export default function BusinessLandingPage({ params }: PageProps) {
+export default function BusinessLandingPage() {
   const router = useRouter();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const params = useParams();
+  const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
@@ -124,6 +121,12 @@ export default function BusinessLandingPage({ params }: PageProps) {
   }, [selectedDate, business]);
 
   async function fetchBusinessData() {
+    if (!id) {
+      setError("ID de negocio inválido.");
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
