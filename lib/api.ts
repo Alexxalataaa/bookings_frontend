@@ -124,7 +124,7 @@ export interface CreatePaymentDto {
   businessId?: number;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3005";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 // Standard Auth Fetch Wrapper
 async function authedFetch<T>(input: string, init: RequestInit = {}): Promise<T> {

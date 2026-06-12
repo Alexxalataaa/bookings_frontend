@@ -32,6 +32,7 @@ function ProfileContent() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [userRole, setUserRole] = useState("");
   
   // Username Form
@@ -55,11 +56,13 @@ function ProfileContent() {
   async function fetchProfile() {
     try {
       setLoading(true);
+      setFetchError(null);
       const data = await getProfile();
       setProfile(data);
       setUsername(data.username);
     } catch (err: any) {
       console.error("Error fetching profile:", err);
+      setFetchError(err?.message || "Error fetching profile");
     } finally {
       setLoading(false);
     }
@@ -137,6 +140,18 @@ function ProfileContent() {
   function handleLogout() {
     localStorage.removeItem("auth_token");
     router.replace("/login");
+  }
+
+  if (fetchError) {
+    return (
+      <div style={{ padding: "80px 40px", textAlign: "center", color: "var(--text-muted)" }}>
+        <AlertCircle size={24} style={{ color: "#f43f5e", marginBottom: "12px" }} />
+        <p>{fetchError}</p>
+        <button onClick={fetchProfile} className="primary-btn" style={{ marginTop: "12px" }}>
+          Reintentar
+        </button>
+      </div>
+    );
   }
 
   if (loading) {

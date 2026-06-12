@@ -185,7 +185,7 @@ export default function BusinessLandingPage({ params }: PageProps) {
         }
 
         // Auto-login or register guest
-        const regRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3005"}/auth/register`, {
+        const regRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/auth/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -202,14 +202,14 @@ export default function BusinessLandingPage({ params }: PageProps) {
         let loginToken = "";
         if (regRes.ok && regData.tempToken) {
           // Verify automatically for frictionless guest experience
-          await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3005"}/auth/verify-register`, {
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/auth/verify-register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ tempToken: regData.tempToken, code: "123456" }), // simulated code
           });
         }
         
-        const loginRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3005"}/auth/login`, {
+        const loginRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username: guestEmail, password: "GuestPassword123!" }),

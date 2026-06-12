@@ -6,7 +6,7 @@ import styles from "./login.module.css";
 import { ShieldAlert, CheckCircle, ArrowRight, Clock, Scissors } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3005";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export default function LoginPage() {
   const router = useRouter();

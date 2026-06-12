@@ -61,7 +61,10 @@ import {
   DollarSign,
   Briefcase,
   Eye,
-  ArrowLeft
+  ArrowLeft,
+  QrCode,
+  Map as MapIcon,
+  Compass
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ChatWidget from "@/components/ChatWidget";
@@ -91,11 +94,25 @@ export default function DashboardClient() {
   // Client view States
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
   const [clientBookings, setClientBookings] = useState<Booking[]>([]);
+  const upcomingBookings = useMemo(() => {
+    const today = new Date();
+    return clientBookings.filter((b) => {
+      const bookingDate = new Date(`${b.date}T${b.time}`);
+      return bookingDate >= today && b.status !== 'cancelled';
+    });
+  }, [clientBookings]);
   const [clientRewards, setClientRewards] = useState<Reward[]>([]);
   const [clientProgress, setClientProgress] = useState<{ [businessId: number]: number }>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [selectedCity, setSelectedCity] = useState("Todos");
+  
+  // Custom Interactive Client States
+  const [selectedRedeemReward, setSelectedRedeemReward] = useState<Reward | null>(null);
+  const [redeemCountdown, setRedeemCountdown] = useState<number>(600); // 10 minutes default
+  const [selectedMapBusiness, setSelectedMapBusiness] = useState<Business | null>(null);
+  const [deleteBookingTarget, setDeleteBookingTarget] = useState<number | null>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   // Superadmin view States
   const [superadminBusinesses, setSuperadminBusinesses] = useState<Business[]>([]);
@@ -395,6 +412,45 @@ export default function DashboardClient() {
     }
   };
 
+  // Effect to manage reward countdown
+  useEffect(() => {
+    if (!selectedRedeemReward) return;
+    setRedeemCountdown(600);
+    const interval = setInterval(() => {
+      setRedeemCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [selectedRedeemReward]);
+
+  const formatCountdown = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Cancel booking handler
+  const handleCancelClientBooking = async () => {
+    if (deleteBookingTarget === null) return;
+    try {
+      setCancelLoading(true);
+      await deleteAppointment(deleteBookingTarget);
+      // Reload client bookings list
+      const myBookings = await getAppointments().catch(() => []);
+      setClientBookings(myBookings);
+    } catch (err) {
+      console.error("Error cancelling client booking:", err);
+    } finally {
+      setDeleteBookingTarget(null);
+      setCancelLoading(false);
+    }
+  };
+
   // Create Business
   const handleCreateBusiness = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -637,20 +693,21 @@ export default function DashboardClient() {
   };
 
   const uniqueCustomers = useMemo(() => {
-    const map = new Map<number, { id: number; label: string }>();
+    const customerMap = new window.Map<number, { id: number; label: string }>();
     businessBookings.forEach((booking) => {
       const customerId = booking.user?.id ?? booking.customerId;
-      if (!map.has(customerId)) {
-        map.set(customerId, {
+      if (!customerMap.has(customerId)) {
+        customerMap.set(customerId, {
           id: customerId,
           label: booking.user?.fullName || `Cliente #${booking.customerId}`,
         });
       }
     });
-    return Array.from(map.values());
+    return Array.from(customerMap.values());
   }, [businessBookings]);
 
-  // Booking Actions (Confirm / Cancel)
+  
+// Booking Actions (Confirm / Cancel)
   const handleConfirmBooking = async (bookingId: number) => {
     if (!selectedBusiness) return;
     try {
@@ -750,14 +807,7 @@ export default function DashboardClient() {
     return Object.keys(counts).map(name => ({ name, value: counts[name] }));
   };
 
-  if (loading && !selectedBusiness && ownedBusinesses.length === 0) {
-    return (
-      <div style={{ padding: "80px", textAlign: "center", color: "var(--text-muted)", minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", background: "var(--bg)" }}>
-        <Activity className="spinner" size={40} style={{ margin: "0 auto 16px", color: "var(--primary)" }} />
-        <p>Cargando panel de BookFlow...</p>
-      </div>
-    );
-  }
+  
 
   const MAPA_CATEGORIAS: any = {
     "Estética": { stringBD: "Belleza" },
@@ -776,6 +826,8 @@ export default function DashboardClient() {
     const matchesCity = selectedCity === "Todos" || b.city === selectedCity;
     return matchesSearch && matchesCategory && matchesCity;
   });
+
+
 
   return (
     <div className="page-stack">
@@ -822,6 +874,30 @@ export default function DashboardClient() {
         }
         .recharts-area-area {
           filter: drop-shadow(0 15px 25px rgba(99, 102, 241, 0.3));
+        }
+        @keyframes dash {
+          to {
+            stroke-dashoffset: -40;
+          }
+        }
+        @keyframes ping-slow {
+          0% {
+            transform: scale(0.8);
+            opacity: 0.5;
+          }
+          100% {
+            transform: scale(2.2);
+            opacity: 0;
+          }
+        }
+        .reward-unlocked-hover {
+          transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease, border-color 0.3s ease !important;
+        }
+        .reward-unlocked-hover:hover {
+          transform: translateY(-4px) scale(1.01) !important;
+          border-color: #a3e635 !important;
+          box-shadow: 0 10px 30px -5px rgba(163, 230, 53, 0.15), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+          cursor: pointer;
         }
       `}</style>
 
@@ -981,12 +1057,34 @@ export default function DashboardClient() {
                   const isWinner = reward.winner?.id === Number(localStorage.getItem("user_id"));
                   
                   return (
-                    <div key={reward.id} className="customer-card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "14px", minHeight: "240px" }}>
+                    <div 
+                      key={reward.id} 
+                      className={`customer-card ${isWinner || isUnlocked ? "reward-unlocked-hover" : ""}`} 
+                      style={{ 
+                        padding: "24px", 
+                        display: "flex", 
+                        flexDirection: "column", 
+                        gap: "14px", 
+                        minHeight: "240px",
+                        cursor: isWinner || isUnlocked ? "pointer" : "default"
+                      }}
+                      onClick={() => (isWinner || isUnlocked) && setSelectedRedeemReward(reward)}
+                    >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
                         <div>
                           <h4 style={{ margin: 0, fontSize: "18px", fontWeight: "bold" }}>{reward.name}</h4>
                           <p style={{ margin: "4px 0 0 0", color: "var(--text-muted)", fontSize: "13px" }}>{reward.description || "Condiciones del premio"}</p>
-                          <p style={{ margin: "4px 0 0 0", color: "#6366f1", fontSize: "13px", fontWeight: "bold" }}>Tienes: {points} pts</p>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "6px" }}>
+                            <p style={{ margin: 0, color: isWinner || isUnlocked ? "#a3e635" : "#6366f1", fontSize: "13px", fontWeight: "bold" }}>
+                              Tienes: {points} pts {reward.pointsRequired && !isUnlocked && `(Faltan ${reward.pointsRequired - points} pts)`}
+                            </p>
+                            {/* Points progress bar for locked rewards */}
+                            {reward.pointsRequired && !isUnlocked && !reward.winner && (
+                              <div style={{ width: "120px", height: "4px", background: "rgba(255,255,255,0.05)", borderRadius: "2px", overflow: "hidden" }}>
+                                <div style={{ width: `${Math.min(100, (points / reward.pointsRequired) * 100)}%`, height: "100%", background: "var(--primary)" }} />
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <span style={{ color: isWinner || isUnlocked ? "#a3e635" : reward.winner ? "#f8fafc" : "#60a5fa", fontSize: "12px", fontWeight: 700, padding: "6px 10px", background: isWinner || isUnlocked ? "rgba(163,230,53,0.12)" : reward.winner ? "rgba(248,250,252,0.08)" : "rgba(96,165,250,0.12)", borderRadius: "12px" }}>
                           {isWinner ? "¡Ganaste!" : (isUnlocked ? "¡Desbloqueado!" : (reward.winner ? "Asignado" : "Disponible"))}
@@ -1002,9 +1100,113 @@ export default function DashboardClient() {
                           <p style={{ margin: "6px 0 0 0" }}>{reward.validUntil ? `Hasta ${reward.validUntil}` : "Sin fecha límite"}</p>
                         </div>
                       </div>
-                      <p style={{ margin: 0, color: isWinner || isUnlocked ? "#a3e635" : "var(--text-muted)", fontSize: "13px" }}>
-                        {isWinner ? "¡Felicidades! Ya tienes este premio asignado." : (isUnlocked ? "¡PREMIO DESBLOQUEADO! Muestra esto en el local." : (reward.winner ? `Premio entregado a ${reward.winner.fullName || 'otro cliente'}.` : "Reclama este premio cumpliendo las condiciones del negocio."))}
+                      <p style={{ margin: "auto 0 0 0", color: isWinner || isUnlocked ? "#a3e635" : "var(--text-muted)", fontSize: "13px" }}>
+                        {isWinner ? "¡Felicidades! Ya tienes este premio asignado. Pulsa para ver QR." : (isUnlocked ? "¡PREMIO DESBLOQUEADO! Pulsa para obtener código QR." : (reward.winner ? `Premio entregado a ${reward.winner.fullName || 'otro cliente'}.` : "Reclama este premio cumpliendo las condiciones del negocio."))}
                       </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          {/* --- Section: Mis Citas Próximas --- */}
+          <section className="section-card" style={{ marginTop: "24px", background: "rgba(255, 255, 255, 0.01)", border: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <div>
+                <h3 style={{ fontSize: "20px", fontWeight: "700", margin: 0 }}>Mis Próximas Citas</h3>
+                <p style={{ margin: "8px 0 0 0", color: "var(--text-muted)", fontSize: "14px" }}>
+                  Gestiona tus reservas activas y consulta cómo llegar al establecimiento.
+                </p>
+              </div>
+              <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+                {upcomingBookings.length} cita{upcomingBookings.length === 1 ? "" : "s"} programada{upcomingBookings.length === 1 ? "" : "s"}
+              </span>
+            </div>
+
+            {upcomingBookings.length === 0 ? (
+              <div style={{ padding: "30px", textAlign: "center", background: "rgba(255,255,255,0.02)", borderRadius: "12px", border: "1px dashed var(--border)" }}>
+                <CalendarIcon size={24} style={{ color: "var(--text-muted)", marginBottom: "8px", opacity: 0.5 }} />
+                <p style={{ color: "var(--text-muted)", fontSize: "14px", margin: 0 }}>
+                  No tienes citas activas para los próximos días. ¡Usa el buscador para agendar una!
+                </p>
+              </div>
+            ) : (
+              <div className="customer-grid">
+                {upcomingBookings.map((booking) => {
+                  const b = allBusinesses.find(x => x.id === booking.businessId);
+                  const isConfirmed = booking.status === "confirmed" || booking.status === "paid";
+                  
+                  return (
+                    <div 
+                      key={booking.id} 
+                      className="customer-card" 
+                      style={{ 
+                        padding: "20px", 
+                        display: "flex", 
+                        flexDirection: "column", 
+                        gap: "12px",
+                        borderLeft: isConfirmed ? "4px solid #10b981" : "4px solid #f59e0b"
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
+                        <div>
+                          <span style={{ fontSize: "11px", color: "var(--primary)", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                            {b?.category || "Bienestar"}
+                          </span>
+                          <h4 style={{ margin: "4px 0 0 0", fontSize: "16px", fontWeight: "bold" }}>
+                            {b?.name || "Establecimiento"}
+                          </h4>
+                          <p style={{ margin: "2px 0 0 0", color: "var(--text-muted)", fontSize: "13px" }}>
+                            {booking.serviceName}
+                          </p>
+                        </div>
+                        <span className={`badge badge--${booking.status}`}>
+                          {booking.status === "pending" ? "Pendiente" : 
+                           booking.status === "confirmed" ? "Confirmada" : 
+                           booking.status === "paid" ? "Pagada" : booking.status}
+                        </span>
+                      </div>
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px", background: "rgba(255,255,255,0.02)", padding: "10px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.03)", fontSize: "13px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)" }}>
+                          <CalendarIcon size={14} style={{ color: "var(--primary)" }} />
+                          <span>{booking.date}</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)" }}>
+                          <Clock size={14} style={{ color: "var(--primary)" }} />
+                          <span>A las {booking.time} hs</span>
+                        </div>
+                        {b?.street && (
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)" }}>
+                            <MapPin size={14} style={{ color: "var(--primary)" }} />
+                            <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {b.street}, {b.city}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: "flex", gap: "8px", marginTop: "auto" }}>
+                        {b && (
+                          <button
+                            onClick={() => setSelectedMapBusiness(b)}
+                            className="secondary-btn"
+                            style={{ flex: 1, padding: "8px 12px", fontSize: "12px", justifyContent: "center" }}
+                          >
+                            <MapIcon size={14} />
+                            <span>Cómo llegar</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setDeleteBookingTarget(booking.id)}
+                          className="danger-btn"
+                          style={{ padding: "8px 12px", fontSize: "12px", justifyContent: "center" }}
+                          title="Cancelar Cita"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -1988,6 +2190,186 @@ export default function DashboardClient() {
                 >
                   <Trash2 size={16} />
                   Confirmar eliminación
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* --- 1. Redeem Reward Canje (QR Code) Modal --- */}
+        {selectedRedeemReward && (
+          <div className="modal-backdrop" onClick={() => setSelectedRedeemReward(null)}>
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.95, opacity: 0 }} 
+              className="modal-card" 
+              style={{ maxWidth: "400px", textAlign: "center", background: "var(--surface)", border: "1px solid rgba(163, 230, 53, 0.3)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                <h3 style={{ fontSize: "20px", fontWeight: "bold", margin: 0, color: "#a3e635", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <QrCode size={22} />
+                  Canjear Recompensa
+                </h3>
+                <button className="mobile-toggle" onClick={() => setSelectedRedeemReward(null)} style={{ border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "18px" }}>✕</button>
+              </div>
+
+              <div style={{ marginBottom: "20px", padding: "16px", background: "rgba(255,255,255,0.02)", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                <h4 style={{ margin: "0 0 6px 0", fontSize: "16px", fontWeight: "bold" }}>{selectedRedeemReward.name}</h4>
+                <p style={{ margin: "0 0 12px 0", color: "var(--text-muted)", fontSize: "13px" }}>{selectedRedeemReward.description}</p>
+                <div style={{ display: "inline-block", padding: "6px 12px", background: "rgba(163,230,53,0.12)", color: "#a3e635", borderRadius: "20px", fontSize: "11px", fontWeight: "bold" }}>
+                  Recompensa Desbloqueada
+                </div>
+              </div>
+
+              {/* QR and Barcode Visuals */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", margin: "24px 0" }}>
+                {/* QR Code SVG */}
+                <div style={{ padding: "16px", background: "#ffffff", borderRadius: "16px", boxShadow: "0 10px 25px rgba(0,0,0,0.5)" }}>
+                  <svg width="150" height="150" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="1.5">
+                    <rect x="2" y="2" width="6" height="6" rx="1" />
+                    <rect x="3" y="3" width="4" height="4" rx="0.5" fill="#000000" />
+                    <rect x="16" y="2" width="6" height="6" rx="1" />
+                    <rect x="17" y="3" width="4" height="4" rx="0.5" fill="#000000" />
+                    <rect x="2" y="16" width="6" height="6" rx="1" />
+                    <rect x="3" y="17" width="4" height="4" rx="0.5" fill="#000000" />
+                    {/* Dots */}
+                    <rect x="10" y="2" width="2" height="2" rx="0.5" fill="#000000" />
+                    <rect x="10" y="6" width="4" height="2" rx="0.5" fill="#000000" />
+                    <rect x="6" y="10" width="2" height="4" rx="0.5" fill="#000000" />
+                    <rect x="10" y="10" width="4" height="4" rx="1" fill="#000000" />
+                    <rect x="16" y="10" width="2" height="2" rx="0.5" fill="#000000" />
+                    <rect x="10" y="16" width="2" height="4" rx="0.5" fill="#000000" />
+                    <rect x="16" y="16" width="4" height="2" rx="0.5" fill="#000000" />
+                    <rect x="18" y="18" width="4" height="4" rx="1" fill="#000000" />
+                  </svg>
+                </div>
+
+                {/* Barcode */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px", width: "100%", alignItems: "center" }}>
+                  <div style={{ display: "flex", gap: "2px", height: "32px", width: "220px", justifyContent: "center", background: "#ffffff", padding: "6px", borderRadius: "4px" }}>
+                    <div style={{ width: "2px", background: "#000" }} />
+                    <div style={{ width: "4px", background: "#000" }} />
+                    <div style={{ width: "1px", background: "#000" }} />
+                    <div style={{ width: "3px", background: "#000" }} />
+                    <div style={{ width: "2px", background: "#000" }} />
+                    <div style={{ width: "1px", background: "#000" }} />
+                    <div style={{ width: "4px", background: "#000" }} />
+                    <div style={{ width: "2px", background: "#000" }} />
+                    <div style={{ width: "3px", background: "#000" }} />
+                    <div style={{ width: "2px", background: "#000" }} />
+                    <div style={{ width: "1px", background: "#000" }} />
+                  </div>
+                  <span style={{ fontFamily: "monospace", fontSize: "12px", color: "var(--text-muted)", letterSpacing: "1px" }}>BF-REDEEM-{(selectedRedeemReward.id * 893).toString().padStart(6, '0')}</span>
+                </div>
+              </div>
+
+              {/* Expiration Timer */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "var(--warning)", fontSize: "14px", marginBottom: "24px", fontWeight: "bold" }}>
+                <Compass size={16} style={{ animation: "spin 4s linear infinite" }} />
+                <span>El código expira en: {formatCountdown(redeemCountdown)}</span>
+              </div>
+
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button onClick={() => setSelectedRedeemReward(null)} className="secondary-btn" style={{ flex: 1, justifyContent: "center" }}>Cerrar</button>
+                <button onClick={() => setSelectedRedeemReward(null)} className="primary-btn" style={{ flex: 1, justifyContent: "center", background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", border: "none" }}>
+                  Listo, Canjeado
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* --- 2. Cancel Client Booking Confirmation Modal --- */}
+        {deleteBookingTarget !== null && (
+          <div className="modal-backdrop" onClick={() => setDeleteBookingTarget(null)}>
+            <motion.div 
+              initial={{ scale: 0.95 }} 
+              animate={{ scale: 1 }} 
+              exit={{ scale: 0.95 }} 
+              className="modal-card" 
+              style={{ maxWidth: "400px", textAlign: "center" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <AlertTriangle size={48} color="var(--accent)" style={{ margin: "0 auto 16px" }} />
+              <h3 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "8px" }}>¿Cancelar Reserva?</h3>
+              <p style={{ color: "var(--text-muted)", marginBottom: "24px" }}>
+                ¿Estás seguro de que deseas cancelar esta reserva? Esta acción no se puede deshacer y notificará al establecimiento.
+              </p>
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button onClick={() => setDeleteBookingTarget(null)} className="secondary-btn" style={{ flex: 1, justifyContent: "center" }} disabled={cancelLoading}>
+                  No, mantener
+                </button>
+                <button onClick={handleCancelClientBooking} className="danger-btn" style={{ flex: 1, justifyContent: "center" }} disabled={cancelLoading}>
+                  {cancelLoading ? "Cancelando..." : "Sí, cancelar cita"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* --- 3. Inline Walking Route Map Modal --- */}
+        {selectedMapBusiness && (
+          <div className="modal-backdrop" onClick={() => setSelectedMapBusiness(null)}>
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.95, opacity: 0 }} 
+              className="modal-card" 
+              style={{ maxWidth: "480px", background: "var(--surface)", border: "1px solid rgba(99, 102, 241, 0.3)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                <h3 style={{ fontSize: "18px", fontWeight: "bold", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                  <MapIcon size={20} style={{ color: "var(--primary)" }} />
+                  Cómo Llegar a {selectedMapBusiness.name}
+                </h3>
+                <button className="mobile-toggle" onClick={() => setSelectedMapBusiness(null)} style={{ border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "18px" }}>✕</button>
+              </div>
+
+              <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: "0 0 16px 0" }}>
+                Categoría: <strong>{selectedMapBusiness.category}</strong>. Ubicado en {selectedMapBusiness.street}, {selectedMapBusiness.city}.
+              </p>
+
+              {/* Animated Map SVG */}
+              <svg viewBox="0 0 400 250" style={{ width: "100%", height: "220px", background: "rgba(0,0,0,0.3)", borderRadius: "12px", border: "1px solid var(--border)", marginBottom: "16px" }}>
+                {/* Map Streets Grid */}
+                <path d="M 0,50 L 400,50 M 0,150 L 400,150 M 100,0 L 100,250 M 280,0 L 280,250" stroke="rgba(255,255,255,0.06)" strokeWidth="8" strokeLinecap="round" />
+                <path d="M 0,100 L 400,100" stroke="rgba(255,255,255,0.03)" strokeWidth="6" strokeLinecap="round" />
+
+                {/* Park */}
+                <rect x="120" y="70" width="140" height="60" rx="10" fill="rgba(16, 185, 129, 0.05)" />
+                <text x="190" y="105" fill="rgba(16, 185, 129, 0.2)" fontSize="11" fontWeight="bold" textAnchor="middle">Parque Urbano</text>
+
+                {/* Dotted route path with animation */}
+                <path d="M 80,180 L 100,180 L 100,100 L 280,100 L 280,80" stroke="var(--primary)" strokeWidth="3.5" strokeDasharray="6,6" fill="none" strokeLinecap="round" style={{ animation: "dash 10s linear infinite" }} />
+                
+                {/* Current Location pulse */}
+                <circle cx="80" cy="180" r="5" fill="#10b981" />
+                <circle cx="80" cy="180" r="12" fill="none" stroke="#10b981" strokeWidth="2.5" style={{ transformOrigin: "80px 180px", animation: "ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite" }} />
+                <text x="80" y="205" fill="#10b981" fontSize="10" fontWeight="bold" textAnchor="middle">Tu ubicación</text>
+
+                {/* Business Marker Pin */}
+                <g transform="translate(280, 80) scale(0.8)">
+                  <path d="M0,0 C-10,-10 -15,-20 -15,-30 C-15,-40 -5,-45 0,-45 C5,-45 15,-40 15,-30 C15,-20 10,-10 0,0 Z" fill="var(--primary)" />
+                  <circle cx="0" cy="-30" r="5" fill="#fff" />
+                </g>
+                <text x="280" y="45" fill="var(--primary)" fontSize="10" fontWeight="bold" textAnchor="middle">{selectedMapBusiness.name}</text>
+              </svg>
+
+              <div style={{ padding: "14px", borderRadius: "10px", background: "rgba(99, 102, 241, 0.05)", border: "1px solid rgba(99, 102, 241, 0.1)", fontSize: "13px", lineHeight: 1.5, color: "var(--text)" }}>
+                📍 <strong>Ruta de navegación:</strong> Aprox. 8 min a pie (450 metros) por Av. Principal. Tu cita está programada en este establecimiento.
+              </div>
+
+              <div style={{ display: "flex", gap: "12px", marginTop: "20px" }}>
+                <button onClick={() => setSelectedMapBusiness(null)} className="secondary-btn" style={{ flex: 1, justifyContent: "center" }}>Cerrar mapa</button>
+                <button 
+                  onClick={() => alert(`Iniciando simulación de guiado GPS a ${selectedMapBusiness.name}...`)} 
+                  className="primary-btn" 
+                  style={{ flex: 1, justifyContent: "center" }}
+                >
+                  Iniciar GPS
                 </button>
               </div>
             </motion.div>
