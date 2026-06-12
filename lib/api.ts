@@ -49,6 +49,7 @@ export interface Reward {
   validUntil?: string;
   pointsRequired?: number;
   isActive: boolean;
+  visibility?: string; // 'public' | 'clients_only'
   createdAt: string;
   business?: Business;
   winner?: UserProfile;

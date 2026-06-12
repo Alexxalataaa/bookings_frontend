@@ -249,6 +249,7 @@ export default function DashboardClient() {
   const [rewardDesc, setRewardDesc] = useState("");
   const [rewardPoints, setRewardPoints] = useState("");
   const [rewardValidUntil, setRewardValidUntil] = useState("");
+  const [rewardVisibility, setRewardVisibility] = useState<"public" | "clients_only">("public");
   const [rewardAssignTarget, setRewardAssignTarget] = useState<Reward | null>(null);
   const [rewardWinnerId, setRewardWinnerId] = useState<number | null>(null);
 
@@ -331,7 +332,16 @@ export default function DashboardClient() {
 
         setAllBusinesses(businesses);
         setClientBookings(myBookings);
-        setClientRewards((rewards as Reward[]).filter(r => r.isActive && (!r.validUntil || new Date(r.validUntil) >= new Date())));
+        setClientRewards((rewards as Reward[]).filter(r => {
+          if (!r.isActive) return false;
+          if (r.validUntil && new Date(r.validUntil) < new Date()) return false;
+          // If visibility is 'clients_only', only show if the user has points in that business
+          if (r.visibility === "clients_only") {
+            const businessId = r.business?.id;
+            if (!businessId || !progressMap[businessId]) return false;
+          }
+          return true;
+        }));
         setClientProgress(progressMap);
       } else if (role === "superadmin") {
         // Fetch all businesses and all bookings for platform management
@@ -606,6 +616,7 @@ export default function DashboardClient() {
           description: rewardDesc,
           pointsRequired: rewardPoints ? Number(rewardPoints) : undefined,
           validUntil: rewardValidUntil || undefined,
+          visibility: rewardVisibility,
         });
       } else {
         await createReward({
@@ -613,6 +624,7 @@ export default function DashboardClient() {
           description: rewardDesc,
           pointsRequired: rewardPoints ? Number(rewardPoints) : undefined,
           validUntil: rewardValidUntil || undefined,
+          visibility: rewardVisibility,
           isActive: true,
           businessId: selectedBusiness.id
         });
@@ -627,6 +639,7 @@ export default function DashboardClient() {
       setRewardDesc("");
       setRewardPoints("");
       setRewardValidUntil("");
+      setRewardVisibility("public");
       setShowAddReward(false);
       setEditingReward(null);
     } catch (err) {
@@ -655,6 +668,7 @@ export default function DashboardClient() {
     setRewardDesc(reward.description || "");
     setRewardPoints(reward.pointsRequired ? reward.pointsRequired.toString() : "");
     setRewardValidUntil(reward.validUntil || "");
+    setRewardVisibility((reward.visibility as "public" | "clients_only") || "public");
     setRewardAssignTarget(null);
     setRewardWinnerId(reward.winner?.id ?? null);
     setShowAddReward(true);
@@ -1668,6 +1682,7 @@ export default function DashboardClient() {
                         setRewardDesc("");
                         setRewardPoints("");
                         setRewardValidUntil("");
+                        setRewardVisibility("public");
                         setShowAddReward(true);
                       }} style={{ padding: "8px 16px", fontSize: "12px", background: "linear-gradient(135deg, #f59e0b, #d97706)", border: "none" }}>
                         <Gift size={14} /> Añadir Premio
@@ -1696,6 +1711,9 @@ export default function DashboardClient() {
                                   Válido hasta: {r.validUntil}
                                 </span>
                               ) : null}
+                              <span style={{ background: r.visibility === "clients_only" ? "rgba(244,63,94,0.1)" : "rgba(34,197,94,0.1)", color: r.visibility === "clients_only" ? "#f43f5e" : "#22c55e", padding: "4px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: "bold" }}>
+                                {r.visibility === "clients_only" ? "Solo mis clientes" : "Público"}
+                              </span>
                             </div>
 
                             <div style={{ display: "grid", gap: "8px", borderTop: "1px solid var(--border)", paddingTop: "8px", marginTop: "8px" }}>
@@ -1735,7 +1753,7 @@ export default function DashboardClient() {
                             <h3 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>
                               {editingReward ? "Editar Premio" : "Añadir Nuevo Premio"}
                             </h3>
-                            <button className="mobile-toggle" onClick={() => setShowAddReward(false)}>✕</button>
+                            <button onClick={() => setShowAddReward(false)} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#94a3b8", fontSize: "16px", fontWeight: "bold", transition: "all 0.2s" }} onMouseEnter={e => { e.currentTarget.style.background = "rgba(244,63,94,0.15)"; e.currentTarget.style.color = "#f43f5e"; }} onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "#94a3b8"; }}>✕</button>
                           </div>
 
                           <form onSubmit={handleSaveReward} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -1757,6 +1775,36 @@ export default function DashboardClient() {
                               <div>
                                 <label className="kpi-card__label" style={{ marginBottom: "4px", display: "block" }}>Fecha de Validez (Opcional)</label>
                                 <input type="date" value={rewardValidUntil} onChange={(e) => setRewardValidUntil(e.target.value)} className="input" />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="kpi-card__label" style={{ marginBottom: "8px", display: "block" }}>Visibilidad del Premio</label>
+                              <div style={{ display: "flex", gap: "8px" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setRewardVisibility("public")}
+                                  style={{
+                                    flex: 1, padding: "10px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer", transition: "all 0.2s",
+                                    border: rewardVisibility === "public" ? "2px solid #22c55e" : "1px solid rgba(255,255,255,0.1)",
+                                    background: rewardVisibility === "public" ? "rgba(34,197,94,0.1)" : "transparent",
+                                    color: rewardVisibility === "public" ? "#22c55e" : "#94a3b8",
+                                  }}
+                                >
+                                  🌍 Todos los usuarios
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setRewardVisibility("clients_only")}
+                                  style={{
+                                    flex: 1, padding: "10px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer", transition: "all 0.2s",
+                                    border: rewardVisibility === "clients_only" ? "2px solid #f43f5e" : "1px solid rgba(255,255,255,0.1)",
+                                    background: rewardVisibility === "clients_only" ? "rgba(244,63,94,0.1)" : "transparent",
+                                    color: rewardVisibility === "clients_only" ? "#f43f5e" : "#94a3b8",
+                                  }}
+                                >
+                                  🔒 Solo mis clientes
+                                </button>
                               </div>
                             </div>
 
